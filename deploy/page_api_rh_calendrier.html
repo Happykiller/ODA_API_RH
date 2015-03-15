@@ -1,0 +1,1296 @@
+<!DOCTYPE html> 
+<html>
+  <head>
+    <!--META-->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.75">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+    <!--CSS-->
+    <link rel="stylesheet" href="API/css/themes/default/jquery.mobile.min.css" />
+    <link rel="stylesheet" href="API/css/themes/default/jquery.mobile.structure.min.css" />
+    <link rel="stylesheet" href="API/css/themes/default/jquery.mobile.theme.min.css" />
+    <!--<link rel="stylesheet" href="css/datatables/css/jquery.dataTables.css"/>--> 
+    <link rel="stylesheet" href="API/css/mycss.css" />
+    <link rel="stylesheet" href="css/mycss.css" />
+
+    <!--JS-->
+    <script type="text/javascript" src="API/js/jquery.min.js"></script>
+    <script type="text/javascript" src="API/js/jquery.mobile.min.js"></script>
+    <!--<script type="text/javascript" src="API/js/highcharts.js"></script>-->
+    <!--<script type="text/javascript" src="API/js/modules/exporting.js"></script>-->
+    <!--<script type="text/javascript" src="API/js/jquery.dataTables.min.js"></script>--> 
+    <script type="text/javascript" src="include/config.js"></script>
+    <script type="text/javascript" src="API/js/fonctions.js"></script>
+    <script type="text/javascript" src="js/fonctions.js"></script>
+
+    <script type="text/javascript">
+    checkMaintenance();
+    checkAuthentification();
+    
+    ///////////////////
+    //BLOCK VARIABLE GLOBAL
+    ///////////////////
+    var id_page = 20;
+    var curseur = null;
+    
+    var color = {
+        colorVide : "#FFFFFF",
+        colorFerier : "#93300F",
+        colorWe : "#848484",
+        colorVac : "#2E64FE",
+        colorCP : "#40FF00",
+        colorQ1a : "#FACC2E",
+        colorQ1b : "#2ECCFA",
+        colorQ2 : "#DF01D7",
+        colorColAction : "#FF8000",
+        colorColRas : "#3ADF00"
+    };
+
+    ///////////////////
+    //BLOCK FONCTIONS EVENEMENTS
+    ///////////////////
+    //A la construction de la page
+    $(document).on('pageinit',function() {
+        try {
+            // Init commmun
+            init_commun();
+
+            // Init page
+        } catch (er) {
+            log(0, "ERROR(init_home):" + er.message);
+        }
+    });
+
+    //Affichage de la page avant onload
+    $(document).on('pageshow',function() {
+        try {
+            show_commun();
+        } catch (er) {
+            log(0, "ERROR(show):" + er.message);
+        }
+    });
+
+    //Fin chargement page
+    function OnLoad() {
+        try {
+            chargerColor();
+            chargerJours();
+            chargerSoldes();
+            chargerConges();
+            chargerDetails();
+        } catch (er) {
+            log(0, "ERROR(OnLoad):" + er.message);
+        }
+    }
+    
+    /**
+     * onfocusInput
+     */
+    function onfocusInput(p_obj) {
+        try {
+            notification("notifcation", "Entr&eacute;e pour valider.",_WARNING);
+            
+            return true;
+       } catch (er) {
+            log(0, "ERROR(onfocusInput):" + er.message);
+            return false;
+        }
+    }
+
+    ///////////////////
+    //BLOCK FONCTIONS METIER
+    ///////////////////
+    /**
+     * chargerColor
+     */
+    function chargerColor(){
+        try {
+            $('#td_ouvre').css("background-color", color.colorVide);
+            $('#td_ferie').css("background-color", color.colorFerier);  
+            $('#td_we').css("background-color", color.colorWe);  
+            $('#td_vac').css("background-color", color.colorVac);  
+            $('#td_CP').css("background-color", color.colorCP);  
+            $('#td_Q1a').css("background-color", color.colorQ1a);
+            $('#td_Q1b').css("background-color", color.colorQ1b);   
+            $('#td_Q2').css("background-color", color.colorQ2);  
+            $('#td_colAction').css("background-color", color.colorColAction);  
+            $('#td_colRas').css("background-color", color.colorColRas);          
+        }
+        catch (er) {
+            log(0, "ERROR(chargerColor):" + er.message);
+        }
+    }
+    
+    /**
+     * chargerJours
+     */
+    function chargerJours(){
+        try {
+            var strhtml = "<IMG SRC=\"API/img/loading.gif\" ALT=\"Chargement\" TITLE=\"Chargement\">";
+            $('#div_waiting').html(strhtml);
+            var tabInput = { annee : 2014 };
+            callBD("API_RH/phpsql/getJoursCalendrier.php", "POST", "text", tabInput, "retourJours");          
+        }
+        catch (er) {
+            log(0, "ERROR(chargerJours):" + er.message);
+        }
+    }
+    
+    /**
+     * chargerSoldes
+     */
+    function chargerSoldes(){
+        try {
+            var tabInput = { code_user : auth, annee : 2014 };
+            var retour = callBD("API_RH/phpsql/getSoldesCongees.php", "POST", "text", tabInput, null, false);
+            var json_retour = JSON.parse(retour);
+            if(json_retour["strErreur"] == ""){
+                for (var indice in json_retour["data"]["soldesCongees"]["data"]) {
+                    var id_div = "#solde_"+json_retour["data"]["soldesCongees"]["data"][indice]["type"];
+                    var solde = json_retour["data"]["soldesCongees"]["data"][indice]["nombre"];
+                    var pris = json_retour["data"]["soldesCongees"]["data"][indice]["pris"];
+                    var reste = json_retour["data"]["soldesCongees"]["data"][indice]["reste"];
+                    $(id_div).val(solde);
+                    $(id_div+"_pris").html(pris);
+                    $(id_div+"_reste").html(reste);
+                }
+            }         
+        }
+        catch (er) {
+            log(0, "ERROR(chargerSoldes):" + er.message);
+        }
+    }
+    
+    /**
+     * chargerDetails
+     */
+    function chargerDetails(){
+        try {
+            var tabInput = { annee : 2014, code_user : auth };
+            callBD("API_RH/phpsql/getDetails.php", "POST", "text", tabInput, "retourDetails");          
+        } catch (er) {
+            log(0, "ERROR(chargerDetails):" + er.message);
+        }
+    }
+    
+    
+    /**
+     * chargerConges
+     */
+    function chargerConges(){
+        try {
+            var tabInput = { annee : 2014, code_user : auth };
+            callBD("API_RH/phpsql/getConges.php", "POST", "text", tabInput, "retourConges");          
+        } catch (er) {
+            log(0, "ERROR(chargerConges):" + er.message);
+        }
+    }
+   
+    /**
+     * choisir
+     */
+    function choisir(p_type){
+        try {
+            curseur = p_type;
+            $('#bouton_choisir_CP').removeClass('ui-disabled');
+            $('#bouton_choisir_Q1a').removeClass('ui-disabled');
+            $('#bouton_choisir_Q1b').removeClass('ui-disabled');
+            $('#bouton_choisir_Q2').removeClass('ui-disabled');
+            $('#bouton_choisir_'+p_type).addClass('ui-disabled');
+            $('#td_vide').css("background-color", color["color"+p_type]);
+            notification("notifcation", "Cliquer sur le(s) demi-journ&eacute;e(s) voulu(s), recliquer pour supprimer.",_WARNING);
+        } catch (er) {
+            log(0, "ERROR(choisir):" + er.message);
+        }
+    }
+   
+    /**
+     * poser
+     */
+    function poser(p_event){
+        try {
+            if(curseur != null){
+                var tabInput = { code_user : auth, annee : 2014, mois : p_event.data.dateMois, jour : p_event.data.dateJour, am_ap : p_event.data.am_ap, type : curseur };
+                callBD("API_RH/phpsql/setConge.php", "POST", "text", tabInput, "retourPoser");
+            }else{
+                notification("notifcation", "Il faut choisir un type de congé.",_WARNING);
+            }
+        } catch (er) {
+            log(0, "ERROR(poser):" + er.message);
+        }
+    }
+    
+    /**
+     * affiche ouvrirDetailsConges
+     */
+    function ouvrirDetailsConges(p_event){
+        try {
+            var date = 2014+"-"+p_event.data.dateMois+"-"+p_event.data.dateJour;
+            
+            var strHtml = chargerDetailsConges(date);
+            
+            affichePopUp("Détails des congés posés.",strHtml);
+        } catch (er) {
+            log(0, "ERROR(ouvrirDetailsConges):" + er.message);
+        }
+    }
+    
+    /**
+     * recap
+     */
+    function recap(){
+        try {
+            var strHtml = chargerRecap();
+            
+            affichePopUp("R&eacute;capitulatif des actions en attente.",strHtml);
+        } catch (er) {
+            log(0, "ERROR(recap):" + er.message);
+        }
+    }
+    
+    /**
+     * affiche chargerDetailsConges
+     */
+    function chargerDetailsConges(p_date){
+        try {
+            var tabInput = { code_user : auth, date : p_date };
+            var retour = callBD("API_RH/phpsql/getDetailsJour.php", "POST", "text", tabInput, null, false);
+            var json_retour = JSON.parse(retour);
+            var strHtml = "Pour le: "+getStrDateFrFromUs(p_date);
+            strHtml += "<br>";
+            strHtml += "<table>";
+            for (var indice in json_retour["data"]["detailsJour"]["data"]) {
+                var id = json_retour["data"]["detailsJour"]["data"][indice]["id"];
+                var code_user = json_retour["data"]["detailsJour"]["data"][indice]["code_user"];
+                var statut = json_retour["data"]["detailsJour"]["data"][indice]["statut"];
+                var am_ap = json_retour["data"]["detailsJour"]["data"][indice]["am_ap"];
+                var displayA = json_retour["data"]["detailsJour"]["data"][indice]["displayA"];
+                var displayV = json_retour["data"]["detailsJour"]["data"][indice]["displayV"];
+                var displayR = json_retour["data"]["detailsJour"]["data"][indice]["displayR"];
+                var strDisplayA = "";
+                if(displayA == "1"){
+                    strDisplayA += "<a href=\"javascript:changeStatut("+id+", 'A', '"+p_date+"');\" id=\"bouton_changeStatut_A\" data-role=\"button\" data-inline=\"true\" data-icon=\"star\" data-mini=\"true\" alt=\"En attente de validation\">A faire valider</a>";
+                }
+                var strDisplayV = "";
+                if(displayV == "1"){
+                    strDisplayV += "<a href=\"javascript:changeStatut("+id+", 'V', '"+p_date+"');\" id=\"bouton_changeStatut_V\" data-role=\"button\" data-inline=\"true\" data-icon=\"check\" data-mini=\"true\" alt=\"Valid&eacute;\">Valid&eacute;</a>";
+                }
+                var strDisplayR = "";
+                if(displayR == "1"){
+                    strDisplayR += "<a href=\"javascript:changeStatut("+id+", 'R', '"+p_date+"');\" id=\"bouton_changeStatut_R\" data-role=\"button\" data-inline=\"true\" data-icon=\"delete\" data-mini=\"true\" alt=\"Refus&eacute;\">Refus&eacute;</a>";
+                }
+                strHtml += "<tr>";
+                strHtml += "<td>"+code_user+"("+am_ap.toUpperCase()+")("+statut+")</td><td>"+strDisplayA+"</td><td>"+strDisplayV+"</td><td>"+strDisplayR+"</td>";
+                strHtml += "</tr>";
+            }
+            strHtml += "</table>";
+            strHtml += "<br>";
+            
+            return strHtml;
+        } catch (er) {
+            log(0, "ERROR(chargerDetailsConges):" + er.message);
+        }
+    }
+    
+    /**
+     * changeStatut
+     */
+    function changeStatut(p_id, p_satut, p_date){
+        try {
+            var tabInput = { id : p_id, satut : p_satut };
+            var retour = callBD("API_RH/phpsql/setStatutConge.php", "POST", "text", tabInput, null, false);
+            var json_retour = JSON.parse(retour);
+            if(json_retour["strErreur"] == ""){
+                var htmlDetails = "";
+                if(p_date == null){
+                    htmlDetails = chargerRecap();
+                }else{
+                    htmlDetails = chargerDetailsConges(p_date);
+                }
+                $('#div_popup').html(htmlDetails).trigger('create');
+                chargerDetails();
+                chargerConges();
+            }         
+        }
+        catch (er) {
+            log(0, "ERROR(changeStatut):" + er.message);
+        }
+    }
+    
+    /**
+     * setNombre
+     */
+    function setNombre(p_type, p_nombre){
+        try {
+            var tabInput = { annee : 2014, code_user : auth, type : p_type, nombre : p_nombre };
+            var retour = callBD("API_RH/phpsql/setNombreConges.php", "POST", "text", tabInput, null, false);
+            var json_retour = JSON.parse(retour);
+            if(json_retour["strErreur"] == ""){
+               chargerSoldes();
+            }else{
+                notification("notifcation", "Aie erreur!", _ALERT);
+            }         
+        }
+        catch (er) {
+            log(0, "ERROR(setNombre):" + er.message);
+        }
+    }
+
+    ///////////////////
+    //BLOCK FONCTIONS AFFICHAGE
+    ///////////////////
+    /**
+     * affiche chargerRecap
+     */
+    function chargerRecap(){
+        try {
+            var tabInput = { code_user : auth, annee : 2014 };
+            var retour = callBD("API_RH/phpsql/getRecap.php", "POST", "text", tabInput, null, false);
+            var json_retour = JSON.parse(retour);
+            var strHtml = "";
+            strHtml += "<br>";
+            strHtml += "<table>";
+            for (var indice in json_retour["data"]["recap"]["data"]) {
+                var id = json_retour["data"]["recap"]["data"][indice]["id"];
+                var date = json_retour["data"]["recap"]["data"][indice]["date"];
+                var code_user = json_retour["data"]["recap"]["data"][indice]["code_user"];
+                var statut = json_retour["data"]["recap"]["data"][indice]["statut"];
+                var am_ap = json_retour["data"]["recap"]["data"][indice]["am_ap"];
+                var displayA = json_retour["data"]["recap"]["data"][indice]["displayA"];
+                var displayV = json_retour["data"]["recap"]["data"][indice]["displayV"];
+                var displayR = json_retour["data"]["recap"]["data"][indice]["displayR"];
+                var strDisplayA = "";
+                if(displayA == "1"){
+                    strDisplayA += "<a href=\"javascript:changeStatut("+id+", 'A', null);\" id=\"bouton_changeStatut_A\" data-role=\"button\" data-inline=\"true\" data-icon=\"star\" data-mini=\"true\" alt=\"En attente de validation\">A faire valider</a>";
+                }
+                var strDisplayV = "";
+                if(displayV == "1"){
+                    strDisplayV += "<a href=\"javascript:changeStatut("+id+", 'V', null);\" id=\"bouton_changeStatut_V\" data-role=\"button\" data-inline=\"true\" data-icon=\"check\" data-mini=\"true\" alt=\"Valid&eacute;\">Valid&eacute;</a>";
+                }
+                var strDisplayR = "";
+                if(displayR == "1"){
+                    strDisplayR += "<a href=\"javascript:changeStatut("+id+", 'R', null);\" id=\"bouton_changeStatut_R\" data-role=\"button\" data-inline=\"true\" data-icon=\"delete\" data-mini=\"true\" alt=\"Refus&eacute;\">Refus&eacute;</a>";
+                }
+                strHtml += "<tr>";
+                strHtml += "<td>"+getStrDateFrFromUs(date)+" : "+code_user+"("+am_ap.toUpperCase()+")("+statut+")</td><td>"+strDisplayA+"</td><td>"+strDisplayV+"</td><td>"+strDisplayR+"</td>";
+                strHtml += "</tr>";
+            }
+            strHtml += "</table>";
+            strHtml += "<br>";
+            
+            return strHtml;
+        } catch (er) {
+            log(0, "ERROR(chargerRecap):" + er.message);
+        }
+    }
+    
+    /**
+     * retourJours
+     * 
+     * @param {array} p_retour
+     */
+    function retourJours(p_retour){
+        try {
+            var json_retour = JSON.parse(p_retour);
+            if(json_retour["strErreur"] == ""){
+                var curMois = "00";
+                var nbJourOuvre = 0;
+                
+                var nbJourOuvreeTotal = 0;
+                var nbJourFerie = 0;
+                var nbJourWe = 0;
+                var nbJourVac = 0;
+                
+                for (var indice in json_retour["data"]["jours"]["data"]) {
+                    var posable = true;
+                    var date = json_retour["data"]["jours"]["data"][indice]["date"];
+                    var dateMois = date.substring(5,7);
+                    var dateJour = date.substring(8,10);
+                    var jour = parseInt(json_retour["data"]["jours"]["data"][indice]["jour"]);
+                    var type = json_retour["data"]["jours"]["data"][indice]["type"];
+                    var commentaires = json_retour["data"]["jours"]["data"][indice]["commentaires"];
+                    commentaires = String(commentaires).replace(/;/g,"");
+                    var ferier = json_retour["data"]["jours"]["data"][indice]["ferier"];
+                    var vacances = json_retour["data"]["jours"]["data"][indice]["vacances"];
+                    var week = json_retour["data"]["jours"]["data"][indice]["week"];
+                    
+                    //----------------------------------------------------------
+                    // Init stat
+                    if(dateJour == "01"){
+                        if (curMois != "00"){
+                            var id_div = '#'+curMois+'_34_01';
+                            $(id_div).html("<center>"+nbJourOuvre+"</center>");
+                            nbJourOuvreeTotal += nbJourOuvre;
+                        }
+                        curMois = dateMois;
+                        nbJourOuvre = 0;
+                    }
+                    
+                    //----------------------------------------------------------
+                    // Init ligne
+                    var couleurDefaut = color.colorVide;
+                    
+                    var calcJour;
+                    if(jour == 1){
+                        calcJour = "6";
+                    }else{
+                        calcJour = (jour - 2).toString();
+                    }
+                    
+                    if((calcJour == "5") || (calcJour == "6")){
+                        couleurDefaut = color.colorWe;
+                        nbJourWe += 1;
+                        posable = false;
+                    }
+                    
+                    if(ferier == "oui"){
+                        couleurDefaut = color.colorFerier;
+                        nbJourFerie += 1;
+                        posable = false;
+                    }
+                    
+                    if((couleurDefaut == color.colorVide)){
+                        nbJourOuvre += 1;
+                    }
+                    
+                    //----------------------------------------------------------
+                    //Personalisation
+                    
+                    //----------------------------------------------------------
+                    //Par defaut
+                    if((couleurDefaut == color.colorVide) && (vacances == "oui")){
+                        couleurDefaut = color.colorVac;
+                        nbJourVac += 1;
+                    }
+                    
+                    var id_div = '#'+dateMois+'_'+dateJour+'_01';
+                    $(id_div).css("width", "25%");
+                    $(id_div).css("float", "left");
+                    $(id_div).css("background-color", couleurDefaut);
+                    $(id_div).css("text-shadow","none");
+                    $(id_div).html(dateJour);
+                    $(id_div).css("text-align", "center");
+                    if(commentaires != ""){
+                        $(id_div).prop('title', commentaires);
+                    }
+                    
+                    id_div = '#'+dateMois+'_'+dateJour+'_02';
+                    var strJour = getJour(calcJour).substring(0,1);
+                    $(id_div).css("width", "25%");
+                    $(id_div).css("float", "left");
+                    $(id_div).css("background-color", couleurDefaut);
+                    $(id_div).css("text-shadow","none");
+                    $(id_div).html(strJour);
+                    $(id_div).css("text-align", "center");
+                    if(commentaires != ""){
+                        $(id_div).prop('title', commentaires);
+                    }
+                    
+                    var id_div = '#'+dateMois+'_'+dateJour+'_03';
+                    $(id_div).css("width", "25%");
+                    $(id_div).css("float", "left");
+                    $(id_div).css("background-color", couleurDefaut);
+                    $(id_div).css("text-shadow","none");
+                    $(id_div).html("&nbsp;");
+                    if(commentaires != ""){
+                        $(id_div).prop('title', commentaires);
+                    }
+                    if(posable){
+                        $(id_div).click({dateMois : dateMois, dateJour : dateJour, am_ap : 'am'}, poser);
+                    }
+                    
+                    var id_div = '#'+dateMois+'_'+dateJour+'_04';
+                    $(id_div).css("width", "25%");
+                    $(id_div).css("float", "left");
+                    $(id_div).css("background-color", couleurDefaut);
+                    $(id_div).css("text-shadow","none");
+                    if(calcJour == "6"){
+                        $(id_div).html(week);
+                    }else{
+                        $(id_div).html("&nbsp;");
+                    }
+                    if(commentaires != ""){
+                        $(id_div).prop('title', commentaires);
+                    }
+                    if(posable){
+                        $(id_div).click({dateMois : dateMois, dateJour : dateJour, am_ap : 'ap'}, poser);
+                    }
+                }
+                var id_div = '#'+curMois+'_34_01';
+                $(id_div).html(nbJourOuvre);
+                $(id_div).css("text-align", "center");
+                
+                $('#div_nb_ouvree').html(nbJourOuvreeTotal+"J");
+                $('#div_nb_ferie').html(nbJourFerie+"J");
+                $('#div_nb_we').html(nbJourWe+"J");
+                $('#div_nb_vac').html(nbJourVac+"J");
+                
+                var strhtml = "";
+                $('#div_waiting').html(strhtml);
+            } else{
+                $('#div_waiting').html(json_retour["strErreur"]);
+            }
+        } catch (er) {
+            log(0, "ERROR(retourJours):" + er.message);
+        }
+    }
+    
+    /**
+     * retourPoser
+     * 
+     * @param {array} p_retour
+     */
+    function retourPoser(p_retour){
+        try {
+            var json_retour = JSON.parse(p_retour);
+            if(json_retour["strErreur"] == ""){
+                var annee = json_retour["data"]["resultat"]["annee"];
+                var mois = json_retour["data"]["resultat"]["mois"];
+                var jour = json_retour["data"]["resultat"]["jour"];
+                var am_ap = json_retour["data"]["resultat"]["am_ap"];
+                var am_ap_labal = "";
+                if(am_ap == 'am'){
+                    am_ap_labal = "03";
+                }else{
+                    am_ap_labal = "04";
+                }
+                var type = json_retour["data"]["resultat"]["type"];
+                var id_div = '#'+mois+'_'+jour+'_'+am_ap_labal;
+                if(type == "vide"){
+                    chargerJours();
+                    chargerSoldes();
+                    chargerConges();
+                    chargerDetails();
+                }else{
+                    $(id_div).css("background-color", color["color"+type]);
+                    $(id_div).html("P");
+                    chargerDetails();
+                    chargerSoldes();
+                }
+                $(id_div).css("text-align", "center");
+            } else{
+                notification("notifcation", "Erreur ("+json_retour["strErreur"]+")",_WARNING);
+            }
+        } catch (er) {
+            log(0, "ERROR(retourPoser):" + er.message);
+        }
+    }
+    
+    /**
+     * retourDetails
+     * 
+     * @param {array} p_retour
+     */
+    function retourDetails(p_retour){
+        try {
+            var nb_colAction = 0;
+            var nb_colRas = 0;
+            
+            var json_retour = JSON.parse(p_retour);
+            if(json_retour["strErreur"] == ""){
+                for (var indice in json_retour["data"]["details"]["data"]) {
+                    var date = json_retour["data"]["details"]["data"][indice]["date"];
+                    var statut = json_retour["data"]["details"]["data"][indice]["statut"];
+                    var nb = json_retour["data"]["details"]["data"][indice]["nb"];
+                    var actionUser = json_retour["data"]["details"]["data"][indice]["actionUser"];
+                    var actionRespon = json_retour["data"]["details"]["data"][indice]["actionRespon"];
+                    var mois = date.substring(5,7);
+                    var jour = date.substring(8,10);
+                    var id_div = '#'+mois+'_'+jour+'_02';
+                    if(actionUser == "1" || actionRespon == "1"){
+                        $(id_div).css("background-color", color.colorColAction);
+                        nb_colAction += 1;
+                    }else{
+                        $(id_div).css("background-color", color.colorColRas);
+                        nb_colRas += 1;
+                    }
+                    $(id_div).prop('title', "Déjà posé : "+(nb/2));
+                    $(id_div).click({dateMois : mois, dateJour : jour}, ouvrirDetailsConges);
+                }
+                if(nb_colAction != 0){
+                    var strHtml = "<a href=\"javascript:recap();\" id=\"bouton_recap\" data-role=\"button\" data-inline=\"true\" data-icon=\"arrow-r\" data-mini=\"true\" title=\"R&eacute;capitulatif des actions en attente.\">"+nb_colAction+"</a>";
+                    $("#div_nb_colAction").html(strHtml).trigger('create');
+                }else{
+                    $("#div_nb_colAction").html(nb_colAction);
+                }
+                $("#div_nb_colRas").html(nb_colRas);
+            } else{
+                notification("notifcation", "Erreur ("+json_retour["strErreur"]+")",_WARNING);
+            }
+        } catch (er) {
+            log(0, "ERROR(retourDetails):" + er.message);
+        }
+    }
+    
+    /**
+     * retourConges
+     * 
+     * @param {array} p_retour
+     */
+    function retourConges(p_retour){
+        try {
+            var json_retour = JSON.parse(p_retour);
+            if(json_retour["strErreur"] == ""){
+                for (var indice in json_retour["data"]["conges"]["data"]) {
+                    var date = json_retour["data"]["conges"]["data"][indice]["date"];
+                    var statut = json_retour["data"]["conges"]["data"][indice]["statut"];
+                    var am_ap = json_retour["data"]["conges"]["data"][indice]["am_ap"];
+                    var type = json_retour["data"]["conges"]["data"][indice]["type"];
+                    var mois = date.substring(5,7);
+                    var jour = date.substring(8,10);
+                    var am_ap_labal = "";
+                    if(am_ap == 'am'){
+                        am_ap_labal = "03";
+                    }else{
+                        am_ap_labal = "04";
+                    }
+                    var id_div = '#'+mois+'_'+jour+'_'+am_ap_labal;
+                    $(id_div).css("background-color", color["color"+type]);
+                    $(id_div).css("text-align", "center");
+                    $(id_div).html(statut);
+                }
+            } else{
+                notification("notifcation", "Erreur ("+json_retour["strErreur"]+")",_WARNING);
+            }
+        } catch (er) {
+            log(0, "ERROR(retourConges):" + er.message);
+        }
+    }
+</script>
+<style>
+.styleHautTd {
+    width: 100px;
+    height: 20px;
+    border-left:solid #000000;
+    border-top:solid #000000;
+}
+.styleBasTd {
+    width: 100px;
+    height: 20px;
+    border-left:solid #000000;
+    border-bottom:solid #000000;
+}
+.styleBaseTd {
+    width: 100px;
+    height: 20px;
+    border-left:solid #000000;
+}
+</style>
+
+</head>
+<body onload="OnLoad();">
+
+    <!-- page -->
+    <div data-role="page" data-title="Titre">
+
+        <!-- /panel -->
+        <div data-role="panel" id="mypanel" data-display="overlay" data-position="left">
+
+        </div>
+        <!-- /panel -->
+
+        <!-- header -->
+        <div data-role="header" data-position="fixed">
+            <a href="#mypanel" data-role="button" data-icon="home" data-iconpos="notext">home</a>
+            <h1 id="id_titre">titre</h1>
+            <a href="javascript:window.location = ('./page_contact.html?mili='+getMilise());" data-role="button" data-icon="info" data-iconpos="notext">Contact</a>
+        </div>
+        <!-- /header -->
+        
+        <!-- navbar -->
+        <!-- /navbar -->
+
+        <!-- content -->
+        <div data-role="content" id="main_content">
+            
+            <!-- PopUp -->
+            <div data-role="popup" id="popup" class="ui-corner-all">
+                <div style="padding:10px 20px;">
+                    <h3><label id="label_popup"></label></h3>
+                    <div id="div_popup"></div>
+                    <a data-role="button" data-theme="b" data-icon="check" href="#" onclick="$('#popup').popup('close');" data-mini="true">Ferm&eacute;</a>
+                </div>
+            </div>
+            <!-- /PopUp -->
+            
+            <div data-role="collapsible" data-collapsed="false" data-mini="true">
+                <h3>Le calendrier 2014</h3>
+                <table style="border-spacing: 0;border-collapse: collapse;">
+                    <tr>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">Janvier</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">F&eacute;vrier</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">Mars</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">Avril</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">Mai</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">Juin</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">Juillet</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">A&ocirc;ut</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">Septembre</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">Octobre</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;text-align:center;">Novembre</td>
+                        <td class="styleHautTd" style="font-weight: bold;border-bottom:solid #000000;border-right:solid #000000;text-align:center;">D&eacute;cembre</td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_01_01"></div><div id="01_01_02"></div><div id="01_01_03"></div><div id="01_01_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_01_01"></div><div id="02_01_02"></div><div id="02_01_03"></div><div id="02_01_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_01_01"></div><div id="03_01_02"></div><div id="03_01_03"></div><div id="03_01_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_01_01"></div><div id="04_01_02"></div><div id="04_01_03"></div><div id="04_01_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_01_01"></div><div id="05_01_02"></div><div id="05_01_03"></div><div id="05_01_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_01_01"></div><div id="06_01_02"></div><div id="06_01_03"></div><div id="06_01_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_01_01"></div><div id="07_01_02"></div><div id="07_01_03"></div><div id="07_01_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_01_01"></div><div id="08_01_02"></div><div id="08_01_03"></div><div id="08_01_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_01_01"></div><div id="09_01_02"></div><div id="09_01_03"></div><div id="09_01_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_01_01"></div><div id="10_01_02"></div><div id="10_01_03"></div><div id="10_01_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_01_01"></div><div id="11_01_02"></div><div id="11_01_03"></div><div id="11_01_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_01_01"></div><div id="12_01_02"></div><div id="12_01_03"></div><div id="12_01_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_02_01"></div><div id="01_02_02"></div><div id="01_02_03"></div><div id="01_02_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_02_01"></div><div id="02_02_02"></div><div id="02_02_03"></div><div id="02_02_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_02_01"></div><div id="03_02_02"></div><div id="03_02_03"></div><div id="03_02_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_02_01"></div><div id="04_02_02"></div><div id="04_02_03"></div><div id="04_02_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_02_01"></div><div id="05_02_02"></div><div id="05_02_03"></div><div id="05_02_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_02_01"></div><div id="06_02_02"></div><div id="06_02_03"></div><div id="06_02_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_02_01"></div><div id="07_02_02"></div><div id="07_02_03"></div><div id="07_02_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_02_01"></div><div id="08_02_02"></div><div id="08_02_03"></div><div id="08_02_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_02_01"></div><div id="09_02_02"></div><div id="09_02_03"></div><div id="09_02_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_02_01"></div><div id="10_02_02"></div><div id="10_02_03"></div><div id="10_02_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_02_01"></div><div id="11_02_02"></div><div id="11_02_03"></div><div id="11_02_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_02_01"></div><div id="12_02_02"></div><div id="12_02_03"></div><div id="12_02_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_03_01"></div><div id="01_03_02"></div><div id="01_03_03"></div><div id="01_03_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_03_01"></div><div id="02_03_02"></div><div id="02_03_03"></div><div id="02_03_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_03_01"></div><div id="03_03_02"></div><div id="03_03_03"></div><div id="03_03_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_03_01"></div><div id="04_03_02"></div><div id="04_03_03"></div><div id="04_03_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_03_01"></div><div id="05_03_02"></div><div id="05_03_03"></div><div id="05_03_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_03_01"></div><div id="06_03_02"></div><div id="06_03_03"></div><div id="06_03_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_03_01"></div><div id="07_03_02"></div><div id="07_03_03"></div><div id="07_03_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_03_01"></div><div id="08_03_02"></div><div id="08_03_03"></div><div id="08_03_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_03_01"></div><div id="09_03_02"></div><div id="09_03_03"></div><div id="09_03_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_03_01"></div><div id="10_03_02"></div><div id="10_03_03"></div><div id="10_03_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_03_01"></div><div id="11_03_02"></div><div id="11_03_03"></div><div id="11_03_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_03_01"></div><div id="12_03_02"></div><div id="12_03_03"></div><div id="12_03_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_04_01"></div><div id="01_04_02"></div><div id="01_04_03"></div><div id="01_04_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_04_01"></div><div id="02_04_02"></div><div id="02_04_03"></div><div id="02_04_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_04_01"></div><div id="03_04_02"></div><div id="03_04_03"></div><div id="03_04_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_04_01"></div><div id="04_04_02"></div><div id="04_04_03"></div><div id="04_04_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_04_01"></div><div id="05_04_02"></div><div id="05_04_03"></div><div id="05_04_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_04_01"></div><div id="06_04_02"></div><div id="06_04_03"></div><div id="06_04_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_04_01"></div><div id="07_04_02"></div><div id="07_04_03"></div><div id="07_04_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_04_01"></div><div id="08_04_02"></div><div id="08_04_03"></div><div id="08_04_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_04_01"></div><div id="09_04_02"></div><div id="09_04_03"></div><div id="09_04_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_04_01"></div><div id="10_04_02"></div><div id="10_04_03"></div><div id="10_04_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_04_01"></div><div id="11_04_02"></div><div id="11_04_03"></div><div id="11_04_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_04_01"></div><div id="12_04_02"></div><div id="12_04_03"></div><div id="12_04_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_05_01"></div><div id="01_05_02"></div><div id="01_05_03"></div><div id="01_05_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_05_01"></div><div id="02_05_02"></div><div id="02_05_03"></div><div id="02_05_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_05_01"></div><div id="03_05_02"></div><div id="03_05_03"></div><div id="03_05_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_05_01"></div><div id="04_05_02"></div><div id="04_05_03"></div><div id="04_05_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_05_01"></div><div id="05_05_02"></div><div id="05_05_03"></div><div id="05_05_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_05_01"></div><div id="06_05_02"></div><div id="06_05_03"></div><div id="06_05_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_05_01"></div><div id="07_05_02"></div><div id="07_05_03"></div><div id="07_05_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_05_01"></div><div id="08_05_02"></div><div id="08_05_03"></div><div id="08_05_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_05_01"></div><div id="09_05_02"></div><div id="09_05_03"></div><div id="09_05_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_05_01"></div><div id="10_05_02"></div><div id="10_05_03"></div><div id="10_05_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_05_01"></div><div id="11_05_02"></div><div id="11_05_03"></div><div id="11_05_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_05_01"></div><div id="12_05_02"></div><div id="12_05_03"></div><div id="12_05_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_06_01"></div><div id="01_06_02"></div><div id="01_06_03"></div><div id="01_06_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_06_01"></div><div id="02_06_02"></div><div id="02_06_03"></div><div id="02_06_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_06_01"></div><div id="03_06_02"></div><div id="03_06_03"></div><div id="03_06_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_06_01"></div><div id="04_06_02"></div><div id="04_06_03"></div><div id="04_06_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_06_01"></div><div id="05_06_02"></div><div id="05_06_03"></div><div id="05_06_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_06_01"></div><div id="06_06_02"></div><div id="06_06_03"></div><div id="06_06_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_06_01"></div><div id="07_06_02"></div><div id="07_06_03"></div><div id="07_06_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_06_01"></div><div id="08_06_02"></div><div id="08_06_03"></div><div id="08_06_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_06_01"></div><div id="09_06_02"></div><div id="09_06_03"></div><div id="09_06_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_06_01"></div><div id="10_06_02"></div><div id="10_06_03"></div><div id="10_06_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_06_01"></div><div id="11_06_02"></div><div id="11_06_03"></div><div id="11_06_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_06_01"></div><div id="12_06_02"></div><div id="12_06_03"></div><div id="12_06_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_07_01"></div><div id="01_07_02"></div><div id="01_07_03"></div><div id="01_07_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_07_01"></div><div id="02_07_02"></div><div id="02_07_03"></div><div id="02_07_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_07_01"></div><div id="03_07_02"></div><div id="03_07_03"></div><div id="03_07_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_07_01"></div><div id="04_07_02"></div><div id="04_07_03"></div><div id="04_07_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_07_01"></div><div id="05_07_02"></div><div id="05_07_03"></div><div id="05_07_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_07_01"></div><div id="06_07_02"></div><div id="06_07_03"></div><div id="06_07_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_07_01"></div><div id="07_07_02"></div><div id="07_07_03"></div><div id="07_07_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_07_01"></div><div id="08_07_02"></div><div id="08_07_03"></div><div id="08_07_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_07_01"></div><div id="09_07_02"></div><div id="09_07_03"></div><div id="09_07_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_07_01"></div><div id="10_07_02"></div><div id="10_07_03"></div><div id="10_07_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_07_01"></div><div id="11_07_02"></div><div id="11_07_03"></div><div id="11_07_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_07_01"></div><div id="12_07_02"></div><div id="12_07_03"></div><div id="12_07_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_08_01"></div><div id="01_08_02"></div><div id="01_08_03"></div><div id="01_08_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_08_01"></div><div id="02_08_02"></div><div id="02_08_03"></div><div id="02_08_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_08_01"></div><div id="03_08_02"></div><div id="03_08_03"></div><div id="03_08_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_08_01"></div><div id="04_08_02"></div><div id="04_08_03"></div><div id="04_08_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_08_01"></div><div id="05_08_02"></div><div id="05_08_03"></div><div id="05_08_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_08_01"></div><div id="06_08_02"></div><div id="06_08_03"></div><div id="06_08_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_08_01"></div><div id="07_08_02"></div><div id="07_08_03"></div><div id="07_08_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_08_01"></div><div id="08_08_02"></div><div id="08_08_03"></div><div id="08_08_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_08_01"></div><div id="09_08_02"></div><div id="09_08_03"></div><div id="09_08_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_08_01"></div><div id="10_08_02"></div><div id="10_08_03"></div><div id="10_08_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_08_01"></div><div id="11_08_02"></div><div id="11_08_03"></div><div id="11_08_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_08_01"></div><div id="12_08_02"></div><div id="12_08_03"></div><div id="12_08_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_09_01"></div><div id="01_09_02"></div><div id="01_09_03"></div><div id="01_09_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_09_01"></div><div id="02_09_02"></div><div id="02_09_03"></div><div id="02_09_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_09_01"></div><div id="03_09_02"></div><div id="03_09_03"></div><div id="03_09_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_09_01"></div><div id="04_09_02"></div><div id="04_09_03"></div><div id="04_09_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_09_01"></div><div id="05_09_02"></div><div id="05_09_03"></div><div id="05_09_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_09_01"></div><div id="06_09_02"></div><div id="06_09_03"></div><div id="06_09_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_09_01"></div><div id="07_09_02"></div><div id="07_09_03"></div><div id="07_09_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_09_01"></div><div id="08_09_02"></div><div id="08_09_03"></div><div id="08_09_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_09_01"></div><div id="09_09_02"></div><div id="09_09_03"></div><div id="09_09_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_09_01"></div><div id="10_09_02"></div><div id="10_09_03"></div><div id="10_09_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_09_01"></div><div id="11_09_02"></div><div id="11_09_03"></div><div id="11_09_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_09_01"></div><div id="12_09_02"></div><div id="12_09_03"></div><div id="12_09_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_10_01"></div><div id="01_10_02"></div><div id="01_10_03"></div><div id="01_10_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_10_01"></div><div id="02_10_02"></div><div id="02_10_03"></div><div id="02_10_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_10_01"></div><div id="03_10_02"></div><div id="03_10_03"></div><div id="03_10_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_10_01"></div><div id="04_10_02"></div><div id="04_10_03"></div><div id="04_10_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_10_01"></div><div id="05_10_02"></div><div id="05_10_03"></div><div id="05_10_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_10_01"></div><div id="06_10_02"></div><div id="06_10_03"></div><div id="06_10_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_10_01"></div><div id="07_10_02"></div><div id="07_10_03"></div><div id="07_10_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_10_01"></div><div id="08_10_02"></div><div id="08_10_03"></div><div id="08_10_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_10_01"></div><div id="09_10_02"></div><div id="09_10_03"></div><div id="09_10_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_10_01"></div><div id="10_10_02"></div><div id="10_10_03"></div><div id="10_10_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_10_01"></div><div id="11_10_02"></div><div id="11_10_03"></div><div id="11_10_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_10_01"></div><div id="12_10_02"></div><div id="12_10_03"></div><div id="12_10_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_11_01"></div><div id="01_11_02"></div><div id="01_11_03"></div><div id="01_11_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_11_01"></div><div id="02_11_02"></div><div id="02_11_03"></div><div id="02_11_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_11_01"></div><div id="03_11_02"></div><div id="03_11_03"></div><div id="03_11_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_11_01"></div><div id="04_11_02"></div><div id="04_11_03"></div><div id="04_11_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_11_01"></div><div id="05_11_02"></div><div id="05_11_03"></div><div id="05_11_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_11_01"></div><div id="06_11_02"></div><div id="06_11_03"></div><div id="06_11_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_11_01"></div><div id="07_11_02"></div><div id="07_11_03"></div><div id="07_11_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_11_01"></div><div id="08_11_02"></div><div id="08_11_03"></div><div id="08_11_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_11_01"></div><div id="09_11_02"></div><div id="09_11_03"></div><div id="09_11_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_11_01"></div><div id="10_11_02"></div><div id="10_11_03"></div><div id="10_11_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_11_01"></div><div id="11_11_02"></div><div id="11_11_03"></div><div id="11_11_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_11_01"></div><div id="12_11_02"></div><div id="12_11_03"></div><div id="12_11_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_12_01"></div><div id="01_12_02"></div><div id="01_12_03"></div><div id="01_12_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_12_01"></div><div id="02_12_02"></div><div id="02_12_03"></div><div id="02_12_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_12_01"></div><div id="03_12_02"></div><div id="03_12_03"></div><div id="03_12_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_12_01"></div><div id="04_12_02"></div><div id="04_12_03"></div><div id="04_12_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_12_01"></div><div id="05_12_02"></div><div id="05_12_03"></div><div id="05_12_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_12_01"></div><div id="06_12_02"></div><div id="06_12_03"></div><div id="06_12_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_12_01"></div><div id="07_12_02"></div><div id="07_12_03"></div><div id="07_12_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_12_01"></div><div id="08_12_02"></div><div id="08_12_03"></div><div id="08_12_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_12_01"></div><div id="09_12_02"></div><div id="09_12_03"></div><div id="09_12_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_12_01"></div><div id="10_12_02"></div><div id="10_12_03"></div><div id="10_12_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_12_01"></div><div id="11_12_02"></div><div id="11_12_03"></div><div id="11_12_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_12_01"></div><div id="12_12_02"></div><div id="12_12_03"></div><div id="12_12_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_13_01"></div><div id="01_13_02"></div><div id="01_13_03"></div><div id="01_13_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_13_01"></div><div id="02_13_02"></div><div id="02_13_03"></div><div id="02_13_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_13_01"></div><div id="03_13_02"></div><div id="03_13_03"></div><div id="03_13_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_13_01"></div><div id="04_13_02"></div><div id="04_13_03"></div><div id="04_13_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_13_01"></div><div id="05_13_02"></div><div id="05_13_03"></div><div id="05_13_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_13_01"></div><div id="06_13_02"></div><div id="06_13_03"></div><div id="06_13_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_13_01"></div><div id="07_13_02"></div><div id="07_13_03"></div><div id="07_13_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_13_01"></div><div id="08_13_02"></div><div id="08_13_03"></div><div id="08_13_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_13_01"></div><div id="09_13_02"></div><div id="09_13_03"></div><div id="09_13_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_13_01"></div><div id="10_13_02"></div><div id="10_13_03"></div><div id="10_13_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_13_01"></div><div id="11_13_02"></div><div id="11_13_03"></div><div id="11_13_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_13_01"></div><div id="12_13_02"></div><div id="12_13_03"></div><div id="12_13_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_14_01"></div><div id="01_14_02"></div><div id="01_14_03"></div><div id="01_14_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_14_01"></div><div id="02_14_02"></div><div id="02_14_03"></div><div id="02_14_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_14_01"></div><div id="03_14_02"></div><div id="03_14_03"></div><div id="03_14_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_14_01"></div><div id="04_14_02"></div><div id="04_14_03"></div><div id="04_14_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_14_01"></div><div id="05_14_02"></div><div id="05_14_03"></div><div id="05_14_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_14_01"></div><div id="06_14_02"></div><div id="06_14_03"></div><div id="06_14_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_14_01"></div><div id="07_14_02"></div><div id="07_14_03"></div><div id="07_14_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_14_01"></div><div id="08_14_02"></div><div id="08_14_03"></div><div id="08_14_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_14_01"></div><div id="09_14_02"></div><div id="09_14_03"></div><div id="09_14_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_14_01"></div><div id="10_14_02"></div><div id="10_14_03"></div><div id="10_14_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_14_01"></div><div id="11_14_02"></div><div id="11_14_03"></div><div id="11_14_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_14_01"></div><div id="12_14_02"></div><div id="12_14_03"></div><div id="12_14_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_15_01"></div><div id="01_15_02"></div><div id="01_15_03"></div><div id="01_15_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_15_01"></div><div id="02_15_02"></div><div id="02_15_03"></div><div id="02_15_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_15_01"></div><div id="03_15_02"></div><div id="03_15_03"></div><div id="03_15_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_15_01"></div><div id="04_15_02"></div><div id="04_15_03"></div><div id="04_15_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_15_01"></div><div id="05_15_02"></div><div id="05_15_03"></div><div id="05_15_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_15_01"></div><div id="06_15_02"></div><div id="06_15_03"></div><div id="06_15_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_15_01"></div><div id="07_15_02"></div><div id="07_15_03"></div><div id="07_15_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_15_01"></div><div id="08_15_02"></div><div id="08_15_03"></div><div id="08_15_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_15_01"></div><div id="09_15_02"></div><div id="09_15_03"></div><div id="09_15_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_15_01"></div><div id="10_15_02"></div><div id="10_15_03"></div><div id="10_15_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_15_01"></div><div id="11_15_02"></div><div id="11_15_03"></div><div id="11_15_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_15_01"></div><div id="12_15_02"></div><div id="12_15_03"></div><div id="12_15_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_16_01"></div><div id="01_16_02"></div><div id="01_16_03"></div><div id="01_16_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_16_01"></div><div id="02_16_02"></div><div id="02_16_03"></div><div id="02_16_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_16_01"></div><div id="03_16_02"></div><div id="03_16_03"></div><div id="03_16_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_16_01"></div><div id="04_16_02"></div><div id="04_16_03"></div><div id="04_16_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_16_01"></div><div id="05_16_02"></div><div id="05_16_03"></div><div id="05_16_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_16_01"></div><div id="06_16_02"></div><div id="06_16_03"></div><div id="06_16_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_16_01"></div><div id="07_16_02"></div><div id="07_16_03"></div><div id="07_16_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_16_01"></div><div id="08_16_02"></div><div id="08_16_03"></div><div id="08_16_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_16_01"></div><div id="09_16_02"></div><div id="09_16_03"></div><div id="09_16_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_16_01"></div><div id="10_16_02"></div><div id="10_16_03"></div><div id="10_16_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_16_01"></div><div id="11_16_02"></div><div id="11_16_03"></div><div id="11_16_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_16_01"></div><div id="12_16_02"></div><div id="12_16_03"></div><div id="12_16_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_17_01"></div><div id="01_17_02"></div><div id="01_17_03"></div><div id="01_17_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_17_01"></div><div id="02_17_02"></div><div id="02_17_03"></div><div id="02_17_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_17_01"></div><div id="03_17_02"></div><div id="03_17_03"></div><div id="03_17_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_17_01"></div><div id="04_17_02"></div><div id="04_17_03"></div><div id="04_17_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_17_01"></div><div id="05_17_02"></div><div id="05_17_03"></div><div id="05_17_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_17_01"></div><div id="06_17_02"></div><div id="06_17_03"></div><div id="06_17_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_17_01"></div><div id="07_17_02"></div><div id="07_17_03"></div><div id="07_17_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_17_01"></div><div id="08_17_02"></div><div id="08_17_03"></div><div id="08_17_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_17_01"></div><div id="09_17_02"></div><div id="09_17_03"></div><div id="09_17_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_17_01"></div><div id="10_17_02"></div><div id="10_17_03"></div><div id="10_17_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_17_01"></div><div id="11_17_02"></div><div id="11_17_03"></div><div id="11_17_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_17_01"></div><div id="12_17_02"></div><div id="12_17_03"></div><div id="12_17_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_18_01"></div><div id="01_18_02"></div><div id="01_18_03"></div><div id="01_18_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_18_01"></div><div id="02_18_02"></div><div id="02_18_03"></div><div id="02_18_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_18_01"></div><div id="03_18_02"></div><div id="03_18_03"></div><div id="03_18_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_18_01"></div><div id="04_18_02"></div><div id="04_18_03"></div><div id="04_18_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_18_01"></div><div id="05_18_02"></div><div id="05_18_03"></div><div id="05_18_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_18_01"></div><div id="06_18_02"></div><div id="06_18_03"></div><div id="06_18_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_18_01"></div><div id="07_18_02"></div><div id="07_18_03"></div><div id="07_18_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_18_01"></div><div id="08_18_02"></div><div id="08_18_03"></div><div id="08_18_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_18_01"></div><div id="09_18_02"></div><div id="09_18_03"></div><div id="09_18_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_18_01"></div><div id="10_18_02"></div><div id="10_18_03"></div><div id="10_18_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_18_01"></div><div id="11_18_02"></div><div id="11_18_03"></div><div id="11_18_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_18_01"></div><div id="12_18_02"></div><div id="12_18_03"></div><div id="12_18_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_19_01"></div><div id="01_19_02"></div><div id="01_19_03"></div><div id="01_19_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_19_01"></div><div id="02_19_02"></div><div id="02_19_03"></div><div id="02_19_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_19_01"></div><div id="03_19_02"></div><div id="03_19_03"></div><div id="03_19_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_19_01"></div><div id="04_19_02"></div><div id="04_19_03"></div><div id="04_19_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_19_01"></div><div id="05_19_02"></div><div id="05_19_03"></div><div id="05_19_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_19_01"></div><div id="06_19_02"></div><div id="06_19_03"></div><div id="06_19_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_19_01"></div><div id="07_19_02"></div><div id="07_19_03"></div><div id="07_19_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_19_01"></div><div id="08_19_02"></div><div id="08_19_03"></div><div id="08_19_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_19_01"></div><div id="09_19_02"></div><div id="09_19_03"></div><div id="09_19_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_19_01"></div><div id="10_19_02"></div><div id="10_19_03"></div><div id="10_19_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_19_01"></div><div id="11_19_02"></div><div id="11_19_03"></div><div id="11_19_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_19_01"></div><div id="12_19_02"></div><div id="12_19_03"></div><div id="12_19_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_20_01"></div><div id="01_20_02"></div><div id="01_20_03"></div><div id="01_20_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_20_01"></div><div id="02_20_02"></div><div id="02_20_03"></div><div id="02_20_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_20_01"></div><div id="03_20_02"></div><div id="03_20_03"></div><div id="03_20_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_20_01"></div><div id="04_20_02"></div><div id="04_20_03"></div><div id="04_20_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_20_01"></div><div id="05_20_02"></div><div id="05_20_03"></div><div id="05_20_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_20_01"></div><div id="06_20_02"></div><div id="06_20_03"></div><div id="06_20_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_20_01"></div><div id="07_20_02"></div><div id="07_20_03"></div><div id="07_20_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_20_01"></div><div id="08_20_02"></div><div id="08_20_03"></div><div id="08_20_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_20_01"></div><div id="09_20_02"></div><div id="09_20_03"></div><div id="09_20_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_20_01"></div><div id="10_20_02"></div><div id="10_20_03"></div><div id="10_20_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_20_01"></div><div id="11_20_02"></div><div id="11_20_03"></div><div id="11_20_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_20_01"></div><div id="12_20_02"></div><div id="12_20_03"></div><div id="12_20_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_21_01"></div><div id="01_21_02"></div><div id="01_21_03"></div><div id="01_21_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_21_01"></div><div id="02_21_02"></div><div id="02_21_03"></div><div id="02_21_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_21_01"></div><div id="03_21_02"></div><div id="03_21_03"></div><div id="03_21_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_21_01"></div><div id="04_21_02"></div><div id="04_21_03"></div><div id="04_21_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_21_01"></div><div id="05_21_02"></div><div id="05_21_03"></div><div id="05_21_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_21_01"></div><div id="06_21_02"></div><div id="06_21_03"></div><div id="06_21_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_21_01"></div><div id="07_21_02"></div><div id="07_21_03"></div><div id="07_21_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_21_01"></div><div id="08_21_02"></div><div id="08_21_03"></div><div id="08_21_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_21_01"></div><div id="09_21_02"></div><div id="09_21_03"></div><div id="09_21_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_21_01"></div><div id="10_21_02"></div><div id="10_21_03"></div><div id="10_21_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_21_01"></div><div id="11_21_02"></div><div id="11_21_03"></div><div id="11_21_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_21_01"></div><div id="12_21_02"></div><div id="12_21_03"></div><div id="12_21_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_22_01"></div><div id="01_22_02"></div><div id="01_22_03"></div><div id="01_22_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_22_01"></div><div id="02_22_02"></div><div id="02_22_03"></div><div id="02_22_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_22_01"></div><div id="03_22_02"></div><div id="03_22_03"></div><div id="03_22_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_22_01"></div><div id="04_22_02"></div><div id="04_22_03"></div><div id="04_22_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_22_01"></div><div id="05_22_02"></div><div id="05_22_03"></div><div id="05_22_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_22_01"></div><div id="06_22_02"></div><div id="06_22_03"></div><div id="06_22_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_22_01"></div><div id="07_22_02"></div><div id="07_22_03"></div><div id="07_22_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_22_01"></div><div id="08_22_02"></div><div id="08_22_03"></div><div id="08_22_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_22_01"></div><div id="09_22_02"></div><div id="09_22_03"></div><div id="09_22_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_22_01"></div><div id="10_22_02"></div><div id="10_22_03"></div><div id="10_22_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_22_01"></div><div id="11_22_02"></div><div id="11_22_03"></div><div id="11_22_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_22_01"></div><div id="12_22_02"></div><div id="12_22_03"></div><div id="12_22_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_23_01"></div><div id="01_23_02"></div><div id="01_23_03"></div><div id="01_23_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_23_01"></div><div id="02_23_02"></div><div id="02_23_03"></div><div id="02_23_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_23_01"></div><div id="03_23_02"></div><div id="03_23_03"></div><div id="03_23_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_23_01"></div><div id="04_23_02"></div><div id="04_23_03"></div><div id="04_23_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_23_01"></div><div id="05_23_02"></div><div id="05_23_03"></div><div id="05_23_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_23_01"></div><div id="06_23_02"></div><div id="06_23_03"></div><div id="06_23_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_23_01"></div><div id="07_23_02"></div><div id="07_23_03"></div><div id="07_23_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_23_01"></div><div id="08_23_02"></div><div id="08_23_03"></div><div id="08_23_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_23_01"></div><div id="09_23_02"></div><div id="09_23_03"></div><div id="09_23_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_23_01"></div><div id="10_23_02"></div><div id="10_23_03"></div><div id="10_23_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_23_01"></div><div id="11_23_02"></div><div id="11_23_03"></div><div id="11_23_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_23_01"></div><div id="12_23_02"></div><div id="12_23_03"></div><div id="12_23_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_24_01"></div><div id="01_24_02"></div><div id="01_24_03"></div><div id="01_24_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_24_01"></div><div id="02_24_02"></div><div id="02_24_03"></div><div id="02_24_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_24_01"></div><div id="03_24_02"></div><div id="03_24_03"></div><div id="03_24_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_24_01"></div><div id="04_24_02"></div><div id="04_24_03"></div><div id="04_24_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_24_01"></div><div id="05_24_02"></div><div id="05_24_03"></div><div id="05_24_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_24_01"></div><div id="06_24_02"></div><div id="06_24_03"></div><div id="06_24_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_24_01"></div><div id="07_24_02"></div><div id="07_24_03"></div><div id="07_24_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_24_01"></div><div id="08_24_02"></div><div id="08_24_03"></div><div id="08_24_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_24_01"></div><div id="09_24_02"></div><div id="09_24_03"></div><div id="09_24_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_24_01"></div><div id="10_24_02"></div><div id="10_24_03"></div><div id="10_24_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_24_01"></div><div id="11_24_02"></div><div id="11_24_03"></div><div id="11_24_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_24_01"></div><div id="12_24_02"></div><div id="12_24_03"></div><div id="12_24_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_25_01"></div><div id="01_25_02"></div><div id="01_25_03"></div><div id="01_25_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_25_01"></div><div id="02_25_02"></div><div id="02_25_03"></div><div id="02_25_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_25_01"></div><div id="03_25_02"></div><div id="03_25_03"></div><div id="03_25_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_25_01"></div><div id="04_25_02"></div><div id="04_25_03"></div><div id="04_25_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_25_01"></div><div id="05_25_02"></div><div id="05_25_03"></div><div id="05_25_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_25_01"></div><div id="06_25_02"></div><div id="06_25_03"></div><div id="06_25_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_25_01"></div><div id="07_25_02"></div><div id="07_25_03"></div><div id="07_25_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_25_01"></div><div id="08_25_02"></div><div id="08_25_03"></div><div id="08_25_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_25_01"></div><div id="09_25_02"></div><div id="09_25_03"></div><div id="09_25_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_25_01"></div><div id="10_25_02"></div><div id="10_25_03"></div><div id="10_25_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_25_01"></div><div id="11_25_02"></div><div id="11_25_03"></div><div id="11_25_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_25_01"></div><div id="12_25_02"></div><div id="12_25_03"></div><div id="12_25_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_26_01"></div><div id="01_26_02"></div><div id="01_26_03"></div><div id="01_26_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_26_01"></div><div id="02_26_02"></div><div id="02_26_03"></div><div id="02_26_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_26_01"></div><div id="03_26_02"></div><div id="03_26_03"></div><div id="03_26_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_26_01"></div><div id="04_26_02"></div><div id="04_26_03"></div><div id="04_26_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_26_01"></div><div id="05_26_02"></div><div id="05_26_03"></div><div id="05_26_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_26_01"></div><div id="06_26_02"></div><div id="06_26_03"></div><div id="06_26_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_26_01"></div><div id="07_26_02"></div><div id="07_26_03"></div><div id="07_26_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_26_01"></div><div id="08_26_02"></div><div id="08_26_03"></div><div id="08_26_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_26_01"></div><div id="09_26_02"></div><div id="09_26_03"></div><div id="09_26_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_26_01"></div><div id="10_26_02"></div><div id="10_26_03"></div><div id="10_26_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_26_01"></div><div id="11_26_02"></div><div id="11_26_03"></div><div id="11_26_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_26_01"></div><div id="12_26_02"></div><div id="12_26_03"></div><div id="12_26_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_27_01"></div><div id="01_27_02"></div><div id="01_27_03"></div><div id="01_27_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_27_01"></div><div id="02_27_02"></div><div id="02_27_03"></div><div id="02_27_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_27_01"></div><div id="03_27_02"></div><div id="03_27_03"></div><div id="03_27_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_27_01"></div><div id="04_27_02"></div><div id="04_27_03"></div><div id="04_27_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_27_01"></div><div id="05_27_02"></div><div id="05_27_03"></div><div id="05_27_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_27_01"></div><div id="06_27_02"></div><div id="06_27_03"></div><div id="06_27_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_27_01"></div><div id="07_27_02"></div><div id="07_27_03"></div><div id="07_27_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_27_01"></div><div id="08_27_02"></div><div id="08_27_03"></div><div id="08_27_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_27_01"></div><div id="09_27_02"></div><div id="09_27_03"></div><div id="09_27_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_27_01"></div><div id="10_27_02"></div><div id="10_27_03"></div><div id="10_27_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_27_01"></div><div id="11_27_02"></div><div id="11_27_03"></div><div id="11_27_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_27_01"></div><div id="12_27_02"></div><div id="12_27_03"></div><div id="12_27_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_28_01"></div><div id="01_28_02"></div><div id="01_28_03"></div><div id="01_28_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_28_01"></div><div id="02_28_02"></div><div id="02_28_03"></div><div id="02_28_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_28_01"></div><div id="03_28_02"></div><div id="03_28_03"></div><div id="03_28_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_28_01"></div><div id="04_28_02"></div><div id="04_28_03"></div><div id="04_28_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_28_01"></div><div id="05_28_02"></div><div id="05_28_03"></div><div id="05_28_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_28_01"></div><div id="06_28_02"></div><div id="06_28_03"></div><div id="06_28_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_28_01"></div><div id="07_28_02"></div><div id="07_28_03"></div><div id="07_28_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_28_01"></div><div id="08_28_02"></div><div id="08_28_03"></div><div id="08_28_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_28_01"></div><div id="09_28_02"></div><div id="09_28_03"></div><div id="09_28_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_28_01"></div><div id="10_28_02"></div><div id="10_28_03"></div><div id="10_28_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_28_01"></div><div id="11_28_02"></div><div id="11_28_03"></div><div id="11_28_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_28_01"></div><div id="12_28_02"></div><div id="12_28_03"></div><div id="12_28_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_29_01"></div><div id="01_29_02"></div><div id="01_29_03"></div><div id="01_29_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_29_01"></div><div id="02_29_02"></div><div id="02_29_03"></div><div id="02_29_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_29_01"></div><div id="03_29_02"></div><div id="03_29_03"></div><div id="03_29_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_29_01"></div><div id="04_29_02"></div><div id="04_29_03"></div><div id="04_29_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_29_01"></div><div id="05_29_02"></div><div id="05_29_03"></div><div id="05_29_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_29_01"></div><div id="06_29_02"></div><div id="06_29_03"></div><div id="06_29_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_29_01"></div><div id="07_29_02"></div><div id="07_29_03"></div><div id="07_29_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_29_01"></div><div id="08_29_02"></div><div id="08_29_03"></div><div id="08_29_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_29_01"></div><div id="09_29_02"></div><div id="09_29_03"></div><div id="09_29_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_29_01"></div><div id="10_29_02"></div><div id="10_29_03"></div><div id="10_29_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_29_01"></div><div id="11_29_02"></div><div id="11_29_03"></div><div id="11_29_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_29_01"></div><div id="12_29_02"></div><div id="12_29_03"></div><div id="12_29_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_30_01"></div><div id="01_30_02"></div><div id="01_30_03"></div><div id="01_30_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_30_01"></div><div id="02_30_02"></div><div id="02_30_03"></div><div id="02_30_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_30_01"></div><div id="03_30_02"></div><div id="03_30_03"></div><div id="03_30_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_30_01"></div><div id="04_30_02"></div><div id="04_30_03"></div><div id="04_30_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_30_01"></div><div id="05_30_02"></div><div id="05_30_03"></div><div id="05_30_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_30_01"></div><div id="06_30_02"></div><div id="06_30_03"></div><div id="06_30_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_30_01"></div><div id="07_30_02"></div><div id="07_30_03"></div><div id="07_30_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_30_01"></div><div id="08_30_02"></div><div id="08_30_03"></div><div id="08_30_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_30_01"></div><div id="09_30_02"></div><div id="09_30_03"></div><div id="09_30_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_30_01"></div><div id="10_30_02"></div><div id="10_30_03"></div><div id="10_30_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_30_01"></div><div id="11_30_02"></div><div id="11_30_03"></div><div id="11_30_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_30_01"></div><div id="12_30_02"></div><div id="12_30_03"></div><div id="12_30_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_31_01"></div><div id="01_31_02"></div><div id="01_31_03"></div><div id="01_31_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_31_01"></div><div id="02_31_02"></div><div id="02_31_03"></div><div id="02_31_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_31_01"></div><div id="03_31_02"></div><div id="03_31_03"></div><div id="03_31_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_31_01"></div><div id="04_31_02"></div><div id="04_31_03"></div><div id="04_31_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_31_01"></div><div id="05_31_02"></div><div id="05_31_03"></div><div id="05_31_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_31_01"></div><div id="06_31_02"></div><div id="06_31_03"></div><div id="06_31_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_31_01"></div><div id="07_31_02"></div><div id="07_31_03"></div><div id="07_31_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_31_01"></div><div id="08_31_02"></div><div id="08_31_03"></div><div id="08_31_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_31_01"></div><div id="09_31_02"></div><div id="09_31_03"></div><div id="09_31_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_31_01"></div><div id="10_31_02"></div><div id="10_31_03"></div><div id="10_31_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_31_01"></div><div id="11_31_02"></div><div id="11_31_03"></div><div id="11_31_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_31_01"></div><div id="12_31_02"></div><div id="12_31_03"></div><div id="12_31_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_32_01"></div><div id="01_32_02"></div><div id="01_32_03"></div><div id="01_32_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_32_01"></div><div id="02_32_02"></div><div id="02_32_03"></div><div id="02_32_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_32_01"></div><div id="03_32_02"></div><div id="03_32_03"></div><div id="03_32_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_32_01"></div><div id="04_32_02"></div><div id="04_32_03"></div><div id="04_32_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_32_01"></div><div id="05_32_02"></div><div id="05_32_03"></div><div id="05_32_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_32_01"></div><div id="06_32_02"></div><div id="06_32_03"></div><div id="06_32_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_32_01"></div><div id="07_32_02"></div><div id="07_32_03"></div><div id="07_32_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_32_01"></div><div id="08_32_02"></div><div id="08_32_03"></div><div id="08_32_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_32_01"></div><div id="09_32_02"></div><div id="09_32_03"></div><div id="09_32_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_32_01"></div><div id="10_32_02"></div><div id="10_32_03"></div><div id="10_32_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_32_01"></div><div id="11_32_02"></div><div id="11_32_03"></div><div id="11_32_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_32_01"></div><div id="12_32_02"></div><div id="12_32_03"></div><div id="12_32_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBaseTd"><div id="01_33_01"></div><div id="01_33_02"></div><div id="01_33_03"></div><div id="01_33_04"></div></td>
+                        <td class="styleBaseTd"><div id="02_33_01"></div><div id="02_33_02"></div><div id="02_33_03"></div><div id="02_33_04"></div></td>
+                        <td class="styleBaseTd"><div id="03_33_01"></div><div id="03_33_02"></div><div id="03_33_03"></div><div id="03_33_04"></div></td>
+                        <td class="styleBaseTd"><div id="04_33_01"></div><div id="04_33_02"></div><div id="04_33_03"></div><div id="04_33_04"></div></td>
+                        <td class="styleBaseTd"><div id="05_33_01"></div><div id="05_33_02"></div><div id="05_33_03"></div><div id="05_33_04"></div></td>
+                        <td class="styleBaseTd"><div id="06_33_01"></div><div id="06_33_02"></div><div id="06_33_03"></div><div id="06_33_04"></div></td>
+                        <td class="styleBaseTd"><div id="07_33_01"></div><div id="07_33_02"></div><div id="07_33_03"></div><div id="07_33_04"></div></td>
+                        <td class="styleBaseTd"><div id="08_33_01"></div><div id="08_33_02"></div><div id="08_33_03"></div><div id="08_33_04"></div></td>
+                        <td class="styleBaseTd"><div id="09_33_01"></div><div id="09_33_02"></div><div id="09_33_03"></div><div id="09_33_04"></div></td>
+                        <td class="styleBaseTd"><div id="10_33_01"></div><div id="10_33_02"></div><div id="10_33_03"></div><div id="10_33_04"></div></td>
+                        <td class="styleBaseTd"><div id="11_33_01"></div><div id="11_33_02"></div><div id="11_33_03"></div><div id="11_33_04"></div></td>
+                        <td class="styleBaseTd" style="border-right:solid #000000;"><div id="12_33_01"></div><div id="12_33_02"></div><div id="12_33_03"></div><div id="12_33_04"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBasTd"><div id="01_34_01"></div><div id="01_34_02"></div><div id="01_34_03"></div><div id="01_34_04"></div></td>
+                        <td class="styleBasTd"><div id="02_34_01"></div><div id="02_34_02"></div><div id="02_34_03"></div><div id="02_34_04"></div></td>
+                        <td class="styleBasTd"><div id="03_34_01"></div><div id="03_34_02"></div><div id="03_34_03"></div><div id="03_34_04"></div></td>
+                        <td class="styleBasTd"><div id="04_34_01"></div><div id="04_34_02"></div><div id="04_34_03"></div><div id="04_34_04"></div></td>
+                        <td class="styleBasTd"><div id="05_34_01"></div><div id="05_34_02"></div><div id="05_34_03"></div><div id="05_34_04"></div></td>
+                        <td class="styleBasTd"><div id="06_34_01"></div><div id="06_34_02"></div><div id="06_34_03"></div><div id="06_34_04"></div></td>
+                        <td class="styleBasTd"><div id="07_34_01"></div><div id="07_34_02"></div><div id="07_34_03"></div><div id="07_34_04"></div></td>
+                        <td class="styleBasTd"><div id="08_34_01"></div><div id="08_34_02"></div><div id="08_34_03"></div><div id="08_34_04"></div></td>
+                        <td class="styleBasTd"><div id="09_34_01"></div><div id="09_34_02"></div><div id="09_34_03"></div><div id="09_34_04"></div></td>
+                        <td class="styleBasTd"><div id="10_34_01"></div><div id="10_34_02"></div><div id="10_34_03"></div><div id="10_34_04"></div></td>
+                        <td class="styleBasTd"><div id="11_34_01"></div><div id="11_34_02"></div><div id="11_34_03"></div><div id="11_34_04"></div></td>
+                        <td class="styleBasTd" style="border-right:solid #000000;"><div id="12_34_01"></div><div id="12_34_02"></div><div id="12_34_03"></div><div id="01_34_04"></div></td>
+                    </tr>
+                </table>
+                <br>
+                <table style="border-spacing: 0;border-collapse: collapse;">
+                    <tr>
+                        <td class="styleHautTd" style="text-shadow:none;font-weight: bold;border-bottom:solid #000000;text-align:center;">L&eacute;gende</td>
+                        <td class="styleHautTd" style="text-shadow:none;font-weight: bold;border-bottom:solid #000000;text-align:center;border-right:solid #000000;text-align:center;">Nombre</td>
+                        <td>&nbsp;</td>
+                        <td class="styleHautTd" style="text-shadow:none;font-weight: bold;border-bottom:solid #000000;text-align:center;width: 150px">L&eacute;gende</td>
+                        <td class="styleHautTd" style="text-shadow:none;font-weight: bold;border-bottom:solid #000000;text-align:center;border-right:solid #000000;text-align:center;">A prendre</td>
+                        <td class="styleHautTd" style="text-shadow:none;font-weight: bold;border-bottom:solid #000000;text-align:center;border-right:solid #000000;text-align:center;">Pris</td>
+                        <td class="styleHautTd" style="text-shadow:none;font-weight: bold;border-bottom:solid #000000;text-align:center;border-right:solid #000000;text-align:center;">Reste</td>
+                        <td class="styleHautTd" style="text-shadow:none;font-weight: bold;border-bottom:solid #000000;text-align:center;border-right:solid #000000;text-align:center;" id="td_vide">&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td class="styleHautTd" style="text-shadow:none;font-weight: bold;border-bottom:solid #000000;text-align:center;width: 150px">L&eacute;gende</td>
+                        <td class="styleHautTd" style="text-shadow:none;font-weight: bold;border-bottom:solid #000000;text-align:center;border-right:solid #000000;text-align:center;">Nombre</td>
+                    </tr>
+                    <tr>
+                        <td class="styleBasTd" style="text-shadow:none;text-align:center;" id="td_ouvre">Ouvr&eacute;</td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="div_nb_ouvree"></div></td>
+                        <td>&nbsp;</td>
+                        <td class="styleBasTd" style="text-shadow:none;text-align:center;" id="td_CP">Cong&eacute;s pay&eacute;s</td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><input id="solde_CP" onChange="setNombre('CP',this.value);" data-mini="true" onfocus="onfocusInput(this);"></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="solde_CP_pris"></div></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="solde_CP_reste"></div></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><a href="javascript:choisir('CP');" id="bouton_choisir_CP" data-role="button" data-inline="true" data-icon="arrow-r" data-mini="true">Choisir</a></td>
+                        <td>&nbsp;</td>
+                        <td class="styleBasTd" style="text-shadow:none;text-align:center;" id="td_colAction">Attente d'action</td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="div_nb_colAction"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBasTd" style="text-shadow:none;text-align:center;" id="td_ferie">F&eacute;ri&eacute;</td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="div_nb_ferie"></div></td>
+                        <td>&nbsp;</td>
+                        <td class="styleBasTd" style="text-shadow:none;text-align:center;" id="td_Q1a">RTT employ&eacute;</td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><input id="solde_Q1a" value="0" onChange="setNombre('Q1a',this.value);" data-mini="true" onfocus="onfocusInput(this);"></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="solde_Q1a_pris"></div></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="solde_Q1a_reste"></div></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><a href="javascript:choisir('Q1a');" id="bouton_choisir_Q1a" data-role="button" data-inline="true" data-icon="arrow-r" data-mini="true">Choisir</a></td>
+                        <td>&nbsp;</td>
+                        <td class="styleBasTd" style="text-shadow:none;text-align:center;" id="td_colRas">Pas d'action</td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="div_nb_colRas"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="styleBasTd" style="text-shadow:none;text-align:center;" id="td_we">Week-End</td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="div_nb_we"></div></td>
+                        <td>&nbsp;</td>
+                        <td class="styleBasTd" style="text-shadow:none;text-align:center;" id="td_Q1b">RTT employeur</td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><input id="solde_Q1b" value="0" onChange="setNombre('Q1b',this.value);" data-mini="true" onfocus="onfocusInput(this);"></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="solde_Q1b_pris"></div></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="solde_Q1b_reste"></div></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><a href="javascript:choisir('Q1b');" id="bouton_choisir_Q1b" data-role="button" data-inline="true" data-icon="arrow-r" data-mini="true">Choisir</a></td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td class="styleBasTd" style="text-shadow:none;text-align:center;" id="td_vac">Vacances</td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="div_nb_vac"></div></td>
+                        <td>&nbsp;</td>
+                        <td class="styleBasTd" style="text-shadow:none;text-align:center;" id="td_Q2">Cong&eacute;s non pay&eacute;s</td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><input id="solde_Q2" value="0" onChange="setNombre('Q2',this.value);" data-mini="true" onfocus="onfocusInput(this);"></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="solde_Q2_pris"></div></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><div id="solde_Q2_reste"></div></td>
+                        <td class="styleBasTd" style="text-shadow:none;border-right:solid #000000;text-align: center;"><a href="javascript:choisir('Q2');" id="bouton_choisir_Q2" data-role="button" data-inline="true" data-icon="arrow-r" data-mini="true">Choisir</a></td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                </table>
+                        
+                <div id="div_waiting"></div>
+            </div>
+            <div id="notifcation" style="background-color:#f7931e;position:absolute;bottom:50px;width:97%;text-align:center;vertical-align:middle;line-height:normal;line-height:30px;height:30px;display:none"></div>		    
+                    
+        </div>
+        <!-- /content -->
+
+        <!-- footer -->
+        <div data-role="footer" data-position="fixed">
+            <a data-role="button" data-icon="search" data-iconpos="notext" class="ui-btn-left" href="javascript:window.location = ('./page_faq.html?mili='+getMilise());">FAQ</a>
+            <h1 id="id_affichageUser">User</h1>
+            <a data-role="button" data-icon="delete" data-iconpos="notext" class="ui-btn-right" href="javascript:window.location = ('./page_sortie.html?mili='+getMilise());">Logout</a>
+        </div>
+        <!-- /footer -->
+
+    </div>
+    <!-- /page -->
+</body>
+</html>

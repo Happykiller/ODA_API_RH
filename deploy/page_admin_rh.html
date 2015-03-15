@@ -1,0 +1,1785 @@
+﻿<!DOCTYPE html> 
+<html>
+  <head>
+    <!--META-->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.75">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+    <!--CSS-->
+    <link rel="stylesheet" href="API/css/themes/default/jquery.mobile.min.css" />
+    <link rel="stylesheet" href="API/css/themes/default/jquery.mobile.structure.min.css" />
+    <!--<link rel="stylesheet" href="API/css/datatables/css/jquery.dataTables.css"/>--> 
+    <link rel="stylesheet" href="API/css/mycss.css" />
+    <link rel="stylesheet" href="css/mycss.css" />
+
+    <!--JS-->
+    <script type="text/javascript" src="API/js/jquery.min.js"></script>
+    <script type="text/javascript" src="API/js/jquery.mobile.min.js"></script>
+    <!--<script type="text/javascript" src="API/js/highcharts.js"></script>-->
+    <!--<script type="text/javascript" src="API/js/modules/exporting.js"></script>-->
+    <!--<script type="text/javascript" src="API/js/jquery.dataTables.min.js"></script>--> 
+    <script type="text/javascript" src="include/config.js"></script>
+    <script type="text/javascript" src="API/js/fonctions.js"></script>
+    <script type="text/javascript" src="API_RH/js/fonctions.js"></script>
+    <script type="text/javascript" src="js/fonctions.js"></script>
+
+    <script language="javascript" type="text/javascript">
+    checkMaintenance();
+    checkAuthentification();
+	
+    ///////////////////
+    //BLOCK VARIABLE GLOBAL
+    ///////////////////
+    var id_page = 23;
+    var debray_listes_users = "0";
+    var debray_figer = "0";
+
+    var tabUser = new Array();
+    var tabPhasesParActivite = new Array();
+    var phaseObligatoire = false;
+    var tabListes = new Array();
+
+
+    ///////////////////
+    //BLOCK FONCTIONS EVENEMENTS
+    ///////////////////
+    $(document).on('pageinit',function() {
+        try {
+            // Init commmun
+            init_commun();
+        }
+        catch (er) {
+            log(0, "ERROR(init_home):" + er.message);
+        }
+    });
+
+    $(document).on('pageshow',function() {
+        try {
+            show_commun();
+        }
+        catch (er) {
+            log(0, "ERROR(show):" + er.message);
+        }
+    });
+		
+    //Fin chargement page
+    function OnLoad() {
+        try {
+            // Init page
+            init_item_listesUsers();
+            init_item_figer();
+
+            var tabListes = new Array();
+            if(debray_listes_users == "1"){
+                tabListes = getListesUsersByPropri(auth);
+            }
+
+            var tabUser = getDataChoix();
+
+            if(debray_figer == "1"){
+                afficherFormFiger(tabUser,tabListes);
+            }else{
+                $( "#divFormFiger" ).text("");
+            }
+
+            afficherChoix(tabUser,tabListes);
+
+            var currentTime = new Date();
+            var annee = currentTime.getFullYear();
+            var mois = pad2(currentTime.getMonth()+1);
+            var jour = pad2(currentTime.getDate());
+            var strDate = annee + '-' + mois + '-' + jour;
+            afficherSuivi(strDate,auth);
+
+            chargePhasesParActivite();
+        }
+        catch (er) {
+            log(0, "ERROR(OnLoad):" + er.message);
+        }
+    }
+		
+    ///////////////////
+    //BLOCK FONCTIONS METIER
+    ///////////////////
+    function init_item_listesUsers() {
+        try {
+            debray_listes_users = getParameter("debray_listes_users");
+        }
+        catch (er) {
+            log(0, "ERROR(init_item_listesUsers):" + er.message);
+        }
+    }
+		
+    function init_item_figer() {
+        try {
+            debray_figer = getParameter("debray_figer");
+        }
+        catch (er) {
+            log(0, "ERROR(init_item_figer):" + er.message);
+        }
+    }
+		
+    function afficherChoix(p_tabUser, p_tabListes) {
+        try {
+            var innerHtml = getHTMLChoix(p_tabUser, p_tabListes);
+            divChoix.innerHTML = innerHtml;
+        }
+        catch (er) {
+            log(0, "ERROR(afficherChoix):" + er.message);
+        }
+    }
+		
+    function afficherFormFiger(p_tabUser, p_tabListes) {
+        try {
+            var tabSemaine = new Array();
+            tabSemaine = getDataSemaines();
+
+            innerHtml = getHTMLFiger(p_tabUser,tabSemaine,p_tabListes);
+
+            divFormFiger.innerHTML = innerHtml;
+        }
+        catch (er) {
+            log(0, "ERROR(afficherChoix):" + er.message);
+        }
+    }
+		
+    function semaineEnCours() {
+        try {
+            var currentTime = new Date();
+            var annee = currentTime.getFullYear();
+            var mois = pad2(currentTime.getMonth()+1);
+            var jour = pad2(currentTime.getDate());
+            var strDate = annee + '-' + mois + '-' + jour;
+            afficherSuivi(strDate,auth);
+        }
+        catch (er) {
+            log(0, "ERROR(semaineEnCours):" + er.message);
+        }
+    }
+		
+    function chargePhasesParActivite() {
+        try {
+            tabPhasesParActivite = getDataPhasesParActivite();
+        }
+        catch (er) {
+            log(0, "ERROR(chargePhasesParActivite):" + er.message);
+        }
+    }
+		
+    function afficherSuivi(p_date, p_auth, p_id) {
+        try {
+            var tab = new Array();
+            var tabDomaine = new Array();
+            var tabPhase = new Array();
+            tab = getDataSuivi(p_date,p_auth);
+            tabDomaine = getDataDomaines();
+            tabPhase = getDataPhases();
+
+            innerHtml = getHTMLSuivi(tab,p_date,p_auth,tabDomaine,tabPhase,p_id);
+
+            divSuivi.innerHTML = innerHtml;
+        }
+        catch (er) {
+            log(0, "ERROR(afficherAffectation):" + er.message);
+        }
+    }		
+
+    function semAvant(p_date,p_auth) {
+        try {
+            var dteDate = getObjDateFromStrUs(p_date);
+            dteDate.setDate(dteDate.getDate() - 7);
+            var annee = dteDate.getFullYear();
+            var mois = pad2(dteDate.getMonth()+1);
+            var jour = pad2(dteDate.getDate());
+            var strDate = annee + '-' + mois + '-' + jour;
+
+            afficherSuivi(strDate, p_auth);
+        }
+        catch (er) {
+            log(0, "ERROR(semAvant):" + er.message);
+        }
+    }
+
+    function semApres(p_date,p_auth) {
+        try {
+            var dteDate = getObjDateFromStrUs(p_date);
+            dteDate.setDate(dteDate.getDate() + 7);
+            var annee = dteDate.getFullYear();
+            var mois = pad2(dteDate.getMonth()+1);
+            var jour = pad2(dteDate.getDate());
+            var strDate = annee + '-' + mois + '-' + jour;
+
+            afficherSuivi(strDate, p_auth);
+        }
+        catch (er) {
+            log(0, "ERROR(semApres):" + er.message);
+        }
+    }
+		
+    function retireTache(p_date,p_auth,p_id) {
+        try {
+            deleteSuiviActivite(p_date,p_auth,p_id);
+
+            afficherSuivi(p_date, p_auth);
+        }
+        catch (er) {
+            log(0, "ERROR(retireTache):" + er.message);
+        }
+    }
+		
+    function editeTache(p_date,p_auth,p_id,p_value) {
+        try {
+            editeSuiviActivite(p_date,p_auth,p_id,p_value);
+
+            afficherSuivi(p_date, p_auth, p_id);
+        }
+        catch (er) {
+            log(0, "ERROR(editeTache):" + er.message);
+        }
+    }
+		
+    ///////////////////
+    //BLOCK FONCTIONS BD
+    ///////////////////
+    function getDataChoix() {
+        //[X][0] = trigramme
+        //[X][1] = nom
+        //[X][2] = prénom
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getChoix.php?milis="+getMilise()+"&ctrl=ok";
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataChoix):" + er.message);
+        }
+    }
+		
+    function getDataSemaines() {
+        //[X][0] = lundi_sql
+        //[X][1] = lundi_fr
+        //[X][2] = dimanche_sql
+        //[X][3] = dimanche_fr
+
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getSemaines.php?milis="+getMilise()+"&ctrl=ok";
+
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataSemaines):" + er.message);
+        }
+    }
+
+    function getDataSuivi(p_date,p_auth) {
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getSuivi.php?milis="+getMilise()+"&date=" + p_date+"&auth=" + p_auth;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataSuivi):" + er.message);
+        }
+    }
+
+    function getDataDomaines() {
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getSuiviDomaines.php?milis="+getMilise()+"&ctrl=ok";
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataDomaines):" + er.message);
+        }
+    }
+
+    function getDataPhases() {
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getSuiviPhases.php?milis="+getMilise()+"&ctrl=ok";
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataDomaines):" + er.message);
+        }
+    }
+
+    function getDataPhasesParActivite() {
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getPhasesParActivite.php?milis="+getMilise()+"&ctrl=ok";
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataSuivi):" + er.message);
+        }
+    }
+
+    function getColorOfColonn(p_valueCeJour,p_valueOuvre,p_valueCharge) {
+        try {
+            strResponse = "";
+
+            if( p_valueCeJour == "1"){
+                strResponse = "#E5DE52";//jaune
+            }else{
+                if( parseInt(p_valueCharge) >= 10){
+                    strResponse = "#81D07A";//vert
+                }else{
+                    if( parseInt(p_valueOuvre) == 1){
+                        strResponse = "#DADADA";//gris
+                    }else{
+                        strResponse = "#DFC091";//orange
+                    }
+                }
+            }
+
+            return strResponse;
+        }
+        catch (er) {
+            log(0, "ERROR(getColorOfColonn):" + er.message);
+        }
+    }
+
+    function isObligatoire(p_tacheType) {
+        try {
+            intResponse = 0;
+
+            var tab = new Array();
+
+            tab = getSQL("SELECT acti_obligatoire FROM tab_suivihebdo_type_activite WHERE 1=1 AND id = '"+p_tacheType+"';");
+
+            if(tab[0][0] == "0"){
+                intResponse = 0;
+            }else{
+                intResponse = 1;
+            }		
+
+            return intResponse;
+        }
+        catch (er) {
+            log(0, "ERROR(isObligatoire):" + er.message);
+        }
+    }
+
+    function ajoutTache(p_date,p_auth,p_tacheType,p_tacheActivite,p_tacheDuree,p_phase) {
+        try {
+            strAlert = "Merci de saisir correctement : ";
+
+            strActi = "";
+            if(isObligatoire(p_tacheType) == 1){
+                if((p_tacheActivite == "Activit\351")||(p_tacheActivite == "")){
+                    strActi = "Activit\351 ";
+                }
+            }
+
+            strDurr = "";
+            if((p_tacheDuree == "Dur\351e")||(p_tacheDuree == "")){
+                strDurr = "Dur\351e ";
+            }
+
+            strDom = "";
+            if(p_tacheType == ""){
+                strDom = "Domaine ";
+            }
+
+            strPhase = "";
+            if((p_phase == "0")&&(phaseObligatoire==true)){
+                strPhase = "Phase ";
+            }
+
+            strAlert += strDom + strActi + strDurr + strPhase;
+
+            strAlert += ".";
+
+            if((strDurr != "")||(strActi != "")||(strDom != "")||(strPhase != "")){
+                    alert(strAlert);
+            }else{
+                insertSuiviActivite(p_date,p_auth,p_tacheType,p_tacheActivite,p_tacheDuree,p_phase);
+
+                afficherSuivi(p_date, p_auth);
+            }
+        } catch (er) {
+            log(0, "ERROR(ajoutTache):" + er.message);
+        }
+    }
+		
+    function insertSuiviActivite(p_date,p_auth,p_tacheType,p_tacheActivite,p_tacheDuree,p_phase) {
+        try {
+            var strResponse = "";
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_insertSuiviActivite.php?milis="+getMilise()+"&date=" + p_date + "&auth=" + p_auth + "&tacheType=" + p_tacheType + "&tacheActivite=" + p_tacheActivite + "&tacheDuree=" + p_tacheDuree + "&phase=" + p_phase;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                    strResponse = xhr_object.responseText;
+            } else {
+                    strResponse = "ERROR";
+            }
+        } catch (er) {
+            log(0, "ERROR(insertSuiviActivite):" + er.message);
+        } finally {
+            delete xhr_object;
+        }
+    }
+		
+    function deleteSuiviActivite(p_date,p_auth,p_id) {
+        try {
+            var strResponse = "";
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_deleteSuiviActivite.php?milis="+getMilise()+"&date=" + p_date + "&auth=" + p_auth + "&id=" + p_id;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+        } catch (er) {
+            log(0, "ERROR(deleteSuiviActivite):" + er.message);
+        } finally {
+            delete xhr_object;
+        }
+    }
+		
+    function editeSuiviActivite(p_date,p_auth,p_id,p_value) {
+        try {
+            var strResponse = "";
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_editeSuiviActivite.php?milis="+getMilise()+"&date=" + p_date + "&auth=" + p_auth + "&id=" + p_id + "&value=" + p_value;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+        }
+        catch (er) {
+            log(0, "ERROR(deleteSuiviActivite):" + er.message);
+        } finally {
+            delete xhr_object;
+        }
+    }
+		
+    function checkFiger(p_code_user,p_date_begin,p_date_end) {
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getCheckFiger.php?milis="+getMilise()+"&code_user=" + p_code_user + "&date_begin=" + p_date_begin + "&date_end=" + p_date_end;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(checkFiger):" + er.message);
+        }
+    }
+		
+    function insertJourFigerUser(p_code_user,p_date) {
+        try {
+            var strResponse = "";
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_insertJourFigerUser.php?milis="+getMilise()+"&code_user=" + p_code_user + "&date=" + p_date;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+        } catch (er) {
+            log(0, "ERROR(insertJourFigerUser):" + er.message);
+        } finally {
+            delete xhr_object;
+        }
+    }
+		
+    function deleteJourFigerUser(p_code_user,p_date_begin,p_date_end) {
+        try {
+            var strResponse = "";
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_deleteJourFigerUser.php?milis="+getMilise()+"&code_user=" + p_code_user + "&date_begin=" + p_date_begin + "&date_end=" + p_date_end;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                    strResponse = xhr_object.responseText;
+            } else {
+                    strResponse = "ERROR";
+            }
+        } catch (er) {
+            log(0, "ERROR(deleteJourFigerUser):" + er.message);
+        } finally {
+            delete xhr_object;
+        }
+    }
+		
+    function changeUser(p_code_user) {
+        try {
+            var myObj = document.getElementById("choix_user");
+
+            if(myObj.options[0].value == ""){
+                myObj.options[0] = null;
+            }
+
+            var currentTime = new Date();
+            var annee = currentTime.getFullYear();
+            var mois = pad2(currentTime.getMonth()+1);
+            var jour = pad2(currentTime.getDate());
+            var strDate = annee + '-' + mois + '-' + jour;
+            afficherSuivi(strDate,p_code_user);
+        }
+        catch (er) {
+            log(0, "ERROR(changeUser):" + er.message);
+        }
+    }
+		
+    function changeListPhase(p_value_domaine,p_str_phase) {
+        try {
+                var myObj = document.getElementById(p_str_phase);
+
+                myObj.length = 0;
+
+                myObj.options[myObj.options.length] = new Option("Phase", "0");
+
+                var nbElem = 0;
+
+                for (var indice in tabPhasesParActivite) {
+                    if((tabPhasesParActivite[indice][0] == p_value_domaine)&&(tabPhasesParActivite[indice][3] != "0")){
+                        myObj.options[myObj.options.length] = new Option(tabPhasesParActivite[indice][4], tabPhasesParActivite[indice][3]);
+                        nbElem ++;
+                    }
+                }
+
+                if(nbElem > 0){
+                    myObj.disabled = false;
+                    phaseObligatoire = true;
+                }else{
+                    myObj.disabled = true;
+                    phaseObligatoire = false;
+                }
+        }
+        catch (er) {
+            log(0, "ERROR(changeListPhase):" + er.message);
+        }
+    }
+			
+    ///////////////////
+    //BLOCK FONCTIONS AFFICHAGE
+    ///////////////////
+    function DeplierReplier() {
+        try {
+            var myObj_sam_haut = document.getElementById("sam_haut");
+            var myObj_sam_bas = document.getElementById("sam_bas");
+            var myObj_dim_haut = document.getElementById("dim_haut");
+            var myObj_dim_bas = document.getElementById("dim_bas");
+            var myObj_img_deplierreplier = document.getElementById("img_deplierreplier");
+
+            if(myObj_sam_haut.style.display == "none"){
+                myObj_sam_haut.style.display = "table-cell";
+                myObj_sam_bas.style.display = "table-cell";
+                myObj_dim_haut.style.display = "table-cell";
+                myObj_dim_bas.style.display = "table-cell";
+
+                myObj_img_deplierreplier.src = "img/mini_replier.png";
+            }else{
+                myObj_sam_haut.style.display = "none";
+                myObj_sam_bas.style.display = "none";
+                myObj_dim_haut.style.display = "none";
+                myObj_dim_bas.style.display = "none";
+
+                myObj_img_deplierreplier.src = "img/mini_deplier.png";
+            }
+        }
+        catch (er) {
+            log(0, "ERROR(DeplierReplier):" + er.message);
+        }
+    }
+		
+    function figer(p_innerHTML) {
+        try {
+            var myObj_lien_figer = document.getElementById("id_lien_figer");
+            var myObj_lien_defiger = document.getElementById("id_lien_defiger");
+            var myObj_choix_figer_user = document.getElementById("choix_figer_user");
+            var myObj_choix_semaine = document.getElementById("choix_semaine");	
+            var tabDate = myObj_choix_semaine.value.split(";");
+
+            var tabJours = new Array();
+            tabJours = getSQL("SELECT DATE FROM `affectation` WHERE 1=1 AND DATE between '"+tabDate[0]+"' and '"+tabDate[1]+"'");
+
+            if((myObj_choix_figer_user.value != "ALL")&&(myObj_choix_figer_user.value != "")){
+                if(p_innerHTML == "D\351figer"){
+                    deleteJourFigerUser(myObj_choix_figer_user.value,tabDate[0],tabDate[1]);
+                    myObj_lien_figer.innerHTML = "Figer";
+                }else{
+                    for (var indice in tabJours) {
+                        insertJourFigerUser(myObj_choix_figer_user.value,tabJours[indice][0]);
+                    }
+                    myObj_lien_figer.innerHTML = "D\351figer";
+                }
+            }else{
+                var listSelected = document.getElementById('choix_figer_user');
+                for (var i = 2; i < listSelected.length; i++) 
+                {
+                    var user = listSelected.options[i].value;
+                    if(p_innerHTML == "D\351figer"){
+                        deleteJourFigerUser(user,tabDate[0],tabDate[1]);
+                        myObj_lien_figer.innerHTML = "";
+                        myObj_lien_defiger.innerHTML = "";
+                        myObj_choix_figer_user.selectedIndex = 0;
+                    }else{
+                        for (var indiceJour in tabJours) {
+                            insertJourFigerUser(user,tabJours[indiceJour][0]);
+                        }
+                        myObj_lien_figer.innerHTML = "";
+                        myObj_lien_defiger.innerHTML = "";
+                        myObj_choix_figer_user.selectedIndex = 0;
+                    }
+                }
+            }
+        } catch (er) {
+            log(0, "ERROR(figer):" + er.message);
+        }
+    }
+		
+    function checkEntreeFiger() {
+        try {
+            var tabCheckFiger = new Array();
+
+            var myObj_lien_figer = document.getElementById("id_lien_figer");
+            var myObj_lien_defiger = document.getElementById("id_lien_defiger");
+            var myObj_choix_figer_user = document.getElementById("choix_figer_user");
+            var myObj_choix_semaine = document.getElementById("choix_semaine");	
+            var tabDate = myObj_choix_semaine.value.split(";");
+
+            if(myObj_choix_figer_user.value == ""){
+                alert("Merci de choisir un utilisateur, ou tous.");
+                myObj_lien_figer.innerHTML = "";
+            }else{
+                if(myObj_choix_figer_user.value == "ALL"){
+                    var answer = confirm("Confirmer d'appliquer \340 tous les utilisateurs ?")
+                    if (answer){
+                        myObj_lien_figer.innerHTML = "Figer";
+                        myObj_lien_defiger.innerHTML = "D\351figer";
+                    }
+                    else{
+                        myObj_lien_figer.innerHTML = "";
+                        myObj_lien_defiger.innerHTML = "";
+                    }
+                }else{
+                    tabCheckFiger = checkFiger(myObj_choix_figer_user.value,tabDate[0],tabDate[1]);
+                    if(tabCheckFiger[0][0] == "0"){
+                        myObj_lien_figer.innerHTML = "Figer";
+                    }else{
+                        myObj_lien_figer.innerHTML = "D\351figer";
+                    }
+                }
+            }
+        } catch (er) {
+            log(0, "ERROR(checkEntreeFiger):" + er.message);
+        }
+    }
+		
+    function checkEntreeFigerListe() {
+        try {
+            var strListe = $('#choix_figer_liste').val();
+            var tabFiltreUsers = getUsersInListe(strListe);
+
+            var myObj = document.getElementById("choix_figer_user");
+
+            myObj.length = 0;
+
+            myObj.options[myObj.options.length] = new Option("Utilisateur", "");
+            myObj.options[myObj.options.length] = new Option("Tous", "ALL");
+
+            for (var indice in tabUser) {
+                myObj.options[myObj.options.length] = new Option(tabUser[indice][1]+" "+tabUser[indice][2], tabUser[indice][0]);
+            }
+
+            for (var indice in tabFiltreUsers) {
+                if(tabFiltreUsers[indice][3] == "0"){
+                    $("#choix_figer_user option[value='"+tabFiltreUsers[indice][0]+"']").remove();
+                }
+            }
+        } catch (er) {
+            log(0, "ERROR(checkEntreeFigerListe):" + er.message);
+        }
+    }
+		
+    function changeUserListe() {
+        try {
+            var strListe = $('#choix_user_liste').val();
+            var tabFiltreUsers = getUsersInListe(strListe);
+
+            var myObj = document.getElementById("choix_user");
+
+            myObj.length = 0;
+
+            myObj.options[myObj.options.length] = new Option("Utilisateur", "");
+
+            for (var indice in tabUser) {
+                    myObj.options[myObj.options.length] = new Option(tabUser[indice][1]+" "+tabUser[indice][2], tabUser[indice][0]);
+            }
+
+            for (var indice in tabFiltreUsers) {
+                    if(tabFiltreUsers[indice][3] == "0"){
+                            $("#choix_user option[value='"+tabFiltreUsers[indice][0]+"']").remove();
+                    }
+            }
+        } catch (er) {
+            log(0, "ERROR(changeUserListe):" + er.message);
+        }
+    }
+		
+    function getHTMLChoix(p_tab, p_tabListes) {
+        try {
+            var strRetour = "";
+
+            strRetour += "<br>";
+            strRetour += "Choix de l'utilisateur &agrave; administrer : ";
+            if(p_tabListes.length > 0){
+                strRetour += "						<SELECT name=\"choix_user_liste\" id=\"choix_user_liste\" style=\"font-size:10px;width:150px;\" onChange=\"changeUserListe();\">";
+                strRetour += "							<OPTION VALUE=\"\">Mes listes</OPTION>";
+                for (var indice in p_tabListes) {
+                        strRetour += "							<OPTION VALUE=\""+p_tabListes[indice][0]+"\">"+p_tabListes[indice][1]+" ("+p_tabListes[indice][2]+")</OPTION>";
+                }
+                strRetour += "						</SELECT>";
+            }
+            strRetour += "						<SELECT name=\"choix_user\" id=\"choix_user\" style=\"font-size:10px;width:100px;\" onchange=\"changeUser(this.value)\">";
+            strRetour += "							<OPTION VALUE=\"\">Utilisateur</OPTION>";
+            for (var indice in p_tab) {
+                strRetour += "							<OPTION VALUE=\""+p_tab[indice][0]+"\">"+p_tab[indice][1]+" "+p_tab[indice][2]+"</OPTION>";
+            }
+            strRetour += "						</SELECT>";
+            strRetour += "<br>";
+            strRetour += "<br>";
+
+            return strRetour;
+        } catch (er) {
+            log(0, "ERROR(getHTMLChoix):" + er.message);
+        }
+    }
+		
+    function getHTMLFiger(p_tabUser, p_tabSemaine, p_tabListes) {
+        try {
+            var strRetour = "";
+
+            strRetour += "<br>";
+            strRetour += "Choix du suivi &agrave; figer : ";
+            if(p_tabListes.length > 0){
+                strRetour += "						<SELECT name=\"choix_figer_liste\" id=\"choix_figer_liste\" style=\"font-size:10px;width:150px;\" onChange=\"checkEntreeFigerListe();\">";
+                strRetour += "							<OPTION VALUE=\"\">Mes listes</OPTION>";
+                for (var indice in p_tabListes) {
+                    strRetour += "							<OPTION VALUE=\""+p_tabListes[indice][0]+"\">"+p_tabListes[indice][1]+" ("+p_tabListes[indice][2]+")</OPTION>";
+                }
+                strRetour += "						</SELECT>";
+            }
+            strRetour += "						<SELECT name=\"choix_figer_user\" id=\"choix_figer_user\" style=\"font-size:10px;width:150px;\" onChange=\"checkEntreeFiger();\">";
+            strRetour += "							<OPTION VALUE=\"\">Utilisateur</OPTION>";
+            strRetour += "							<OPTION VALUE=\"ALL\">Tous</OPTION>";
+            for (var indice in p_tabUser) {
+                strRetour += "							<OPTION VALUE=\""+p_tabUser[indice][0]+"\">"+p_tabUser[indice][1]+" "+p_tabUser[indice][2]+"</OPTION>";
+            }
+            strRetour += "						</SELECT>";
+            strRetour += "						<SELECT name=\"choix_semaine\" id=\"choix_semaine\" style=\"font-size:10px;width:150px;\" onChange=\"checkEntreeFiger();\">";
+            for (var indice in p_tabSemaine) {
+                strRetour += "							<OPTION VALUE=\""+p_tabSemaine[indice][0]+";"+p_tabSemaine[indice][2]+"\">"+p_tabSemaine[indice][1]+" - "+p_tabSemaine[indice][3]+"</OPTION>";
+            }
+            strRetour += "						</SELECT>";
+            strRetour += "&nbsp;&nbsp; <a href=\"javascript:;\" onClick=\"figer(this.innerHTML);\" id=\"id_lien_figer\"></a> &nbsp; <a href=\"javascript:;\" onClick=\"figer(this.innerHTML);\" id=\"id_lien_defiger\"></a> <br>";
+            strRetour += "<br>";
+            strRetour += "<br>";
+
+            return strRetour;
+        } catch (er) {
+            log(0, "ERROR(getHTMLChoix):" + er.message);
+        }
+    }
+		
+    function getHTMLSuivi(p_tab,p_date,p_auth,p_tabDomaine,p_tabPhase,p_id_green) {
+        try {
+            var strRetour = "";
+
+            strRetour += "<table cellpadding=\"0\" cellspacing=\"0\" border=1 style=\"background-color:white;text-shadow: none;\">";
+            strRetour += "	<tr>";
+            strRetour += "		<td rowspan=\"2\" width =\"25px\" style=\"text-align:center;\">";
+            strRetour += "		  <a href=\"javascript:;\" onClick=\"semAvant('"+p_date+"','"+p_auth+"');\"><img border=0 src=\"API_RH/img/avant.png\" /></a>";
+            strRetour += "		</td>";
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[0][0],p_tab[0][3],p_tab[0][4])+"\" style=\"width: 210px;font-size:14px;\">";
+            var tabCheckFiger = checkFiger(p_auth,p_tab[0][2],p_tab[0][2]);
+            if(tabCheckFiger[0][0] == "0"){
+                    strFiger = "";
+            }else{
+                    strFiger = "<img style=\"vertical-align:text-bottom;\" border=0 src=\"API_RH/img/mini_figer.png\" />";
+            }
+            strRetour += "		 &nbsp;<b>"+getJour(p_tab[0][1])+" "+getStrDateFrFromUs(p_tab[0][2])+" : "+p_tab[0][4]+"/10&nbsp;"+strFiger+"</b>";
+            strRetour += "		</td>";
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[1][0],p_tab[1][3],p_tab[1][4])+"\" style=\"width: 210px;font-size:14px;\">";
+            var tabCheckFiger = checkFiger(p_auth,p_tab[1][2],p_tab[1][2]);
+            if(tabCheckFiger[0][0] == "0"){
+                    strFiger = "";
+            }else{
+                    strFiger = "<img style=\"vertical-align:text-bottom;\" border=0 src=\"API_RH/img/mini_figer.png\" />";
+            }
+            strRetour += "		  &nbsp;<b>"+getJour(p_tab[1][1])+" "+getStrDateFrFromUs(p_tab[1][2])+" : "+p_tab[1][4]+"/10&nbsp;"+strFiger+"</b>";
+            strRetour += "		</td>";
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[2][0],p_tab[2][3],p_tab[2][4])+"\" style=\"width: 210px;font-size:14px;\">";
+            var tabCheckFiger = checkFiger(p_auth,p_tab[2][2],p_tab[2][2]);
+            if(tabCheckFiger[0][0] == "0"){
+                    strFiger = "";
+            }else{
+                    strFiger = "<img style=\"vertical-align:text-bottom;\" border=0 src=\"API_RH/img/mini_figer.png\" />";
+            }
+            strRetour += "		  &nbsp;<b>"+getJour(p_tab[2][1])+" "+getStrDateFrFromUs(p_tab[2][2])+" : "+p_tab[2][4]+"/10&nbsp;"+strFiger+"</b>";
+            strRetour += "		</td>";
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[3][0],p_tab[3][3],p_tab[3][4])+"\" style=\"width: 210px;font-size:14px;\">";
+            var tabCheckFiger = checkFiger(p_auth,p_tab[3][2],p_tab[3][2]);
+            if(tabCheckFiger[0][0] == "0"){
+                    strFiger = "";
+            }else{
+                    strFiger = "<img style=\"vertical-align:text-bottom;\" border=0 src=\"API_RH/img/mini_figer.png\" />";
+            }
+            strRetour += "		  &nbsp;<b>"+getJour(p_tab[3][1])+" "+getStrDateFrFromUs(p_tab[3][2])+" : "+p_tab[3][4]+"/10&nbsp;"+strFiger+"</b>";
+            strRetour += "		</td>";
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[4][0],p_tab[4][3],p_tab[4][4])+"\" style=\"width: 210px;font-size:14px;\">";
+            var tabCheckFiger = checkFiger(p_auth,p_tab[4][2],p_tab[4][2]);
+            if(tabCheckFiger[0][0] == "0"){
+                    strFiger = "";
+            }else{
+                    strFiger = "<img style=\"vertical-align:text-bottom;\" border=0 src=\"API_RH/img/mini_figer.png\" />";
+            }
+            strRetour += "		  &nbsp;<b>"+getJour(p_tab[4][1])+" "+getStrDateFrFromUs(p_tab[4][2])+" : "+p_tab[4][4]+"/10&nbsp;"+strFiger+"</b>";
+            strRetour += "		</td>";
+            strRetour += "		<td rowspan=\"2\" width =\"20px\" style=\"text-align:center;\">";
+            strRetour += "		  <a href=\"javascript:;\" onClick=\"DeplierReplier();\"><img id=\"img_deplierreplier\" border=0 src=\"API_RH/img/mini_deplier.png\" /></a>";
+            strRetour += "		</td>";
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[5][0],p_tab[5][3],p_tab[5][4])+"\" style=\"width: 210px;font-size:14px;display:none;\" id=\"sam_haut\">";
+            var tabCheckFiger = checkFiger(p_auth,p_tab[5][2],p_tab[5][2]);
+            if(tabCheckFiger[0][0] == "0"){
+                    strFiger = "";
+            }else{
+                    strFiger = "<img style=\"vertical-align:text-bottom;\" border=0 src=\"API_RH/img/mini_figer.png\" />";
+            }
+            strRetour += "		  &nbsp;<b>"+getJour(p_tab[5][1])+" "+getStrDateFrFromUs(p_tab[5][2])+" : "+p_tab[5][4]+"/10&nbsp;"+strFiger+"</b>";
+            strRetour += "		</td>";
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[6][0],p_tab[6][3],p_tab[6][4])+"\" style=\"width: 210px;font-size:14px;display:none;\" id=\"dim_haut\">";
+            var tabCheckFiger = checkFiger(p_auth,p_tab[6][2],p_tab[6][2]);
+            if(tabCheckFiger[0][0] == "0"){
+                    strFiger = "";
+            }else{
+                    strFiger = "<img style=\"vertical-align:text-bottom;\" border=0 src=\"API_RH/img/mini_figer.png\" />";
+            }
+            strRetour += "		  &nbsp;<b>"+getJour(p_tab[6][1])+" "+getStrDateFrFromUs(p_tab[6][2])+" : "+p_tab[6][4]+"/10&nbsp;"+strFiger+"</b>";
+            strRetour += "		</td>";
+            strRetour += "		<td rowspan=\"2\" width =\"25px\" style=\"text-align:center;\">";
+            strRetour += "		  <a href=\"javascript:;\" onClick=\"semApres('"+p_date+"','"+p_auth+"');\"><img border=0 src=\"API_RH/img/apres.png\" /></a>";
+            strRetour += "		</td>";
+            strRetour += "	</tr>";
+            strRetour += "	<tr>";
+
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[0][0],p_tab[0][3],p_tab[0][4])+"\"  style=\"text-align:center;vertical-align:top;\">";
+            strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+            strRetour += "				<tr>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"tacheType_0\" style=\"font-size:10px;width:60px;\" onchange=\"changeListPhase(this.value,'phase_0')\">";
+            strRetour += "							<OPTION VALUE=\"\">Domaine</OPTION>";
+            for (var indiceDomaines in p_tabDomaine) {
+                    strRetour += "							<OPTION VALUE=\""+p_tabDomaine[indiceDomaines][0]+"\">"+p_tabDomaine[indiceDomaines][1]+"</OPTION>";
+            }
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 100px;text-align:center;\">";
+            strRetour += "						<INPUT type=text name=\"tacheActivite_0\" value=\"Activit&eacute;\" size=\"9\" style=\"font-size:10px;\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"phase_0\" id=\"phase_0\" style=\"font-size:10px;width:60px;\" disabled>";
+            strRetour += "							<OPTION VALUE=\"0\">Phase</OPTION>";
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 30px;text-align:center;\">";
+            strRetour += "					  <INPUT type=text name=\"tacheDuree_0\" value=\"Dur&eacute;e\" style=\"font-size:10px;width: 30px;\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+            strRetour += "					  <a href=\"javascript:;\" onClick=\"ajoutTache('"+p_tab[0][2]+"','"+p_auth+"',document.forms.formSuivi.tacheType_0.value,document.forms.formSuivi.tacheActivite_0.value,document.forms.formSuivi.tacheDuree_0.value,document.forms.formSuivi.phase_0.value);\"><img border=0 src=\"API_RH/img/mini_plus.png\" /></a>";
+            strRetour += "					</td>";
+            strRetour += "				</tr>";
+            strRetour += "			</table>";
+
+            strRetour += "			<br>";
+
+            i = 5;
+            while(( p_tab[0][i] != "ZZZ" )&(i<100))
+            {
+                    strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+                    strRetour += "				<tr>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"retireTache('"+p_tab[0][2]+"','"+p_auth+"','"+p_tab[0][i]+"');\"><img border=0 src=\"API_RH/img/mini_moins.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypeActi = p_tab[0][i+1];
+                    for (var indiceDomaines in p_tabDomaine) {
+                            if(p_tabDomaine[indiceDomaines][0] == idTypeActi){
+                                    strDescriptionDomaine = p_tabDomaine[indiceDomaines][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionDomaine+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 100px;text-align:center;font-size:10px;\">";
+                    strRetour += "						"+p_tab[0][i+2]+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypePhase = p_tab[0][i+4];
+                    for (var indicePhases in p_tabPhase) {
+                            if(p_tabPhase[indicePhases][0] == idTypePhase){
+                                    strDescriptionPhase = p_tabPhase[indicePhases][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionPhase+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 30px;text-align:center;font-size:10px;\">";
+                    if(p_id_green != parseInt(p_tab[0][i])){
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[0][i]+"\" value=\""+p_tab[0][i+3]+"\" style=\"font-size:10px;width: 30px;\">";
+                    }else{
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[0][i]+"\" value=\""+p_tab[0][i+3]+"\" style=\"font-size:10px;width: 30pxbackground-color:#66CC33;\">";
+                    }
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"editeTache('"+p_tab[0][2]+"','"+p_auth+"','"+p_tab[0][i]+"',document.forms.formSuivi.tacheDuree_"+p_tab[0][i]+".value);\"><img border=0 src=\"API_RH/img/mini_valid.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "				</tr>";
+                    strRetour += "			</table>";
+                    i += 5;
+            }	
+            strRetour += "		</td>";
+
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[1][0],p_tab[1][3],p_tab[1][4])+"\"  style=\"text-align:center;vertical-align:top;\">";
+            strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+            strRetour += "				<tr>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"tacheType_1\" style=\"font-size:10px;width:60px;\" onchange=\"changeListPhase(this.value,'phase_1')\">";
+            strRetour += "							<OPTION VALUE=\"\">Domaine</OPTION>";
+            for (var indiceDomaines in p_tabDomaine) {
+                    strRetour += "							<OPTION VALUE=\""+p_tabDomaine[indiceDomaines][0]+"\">"+p_tabDomaine[indiceDomaines][1]+"</OPTION>";
+            }
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 100px;text-align:center;\">";
+            strRetour += "						<INPUT type=text name=\"tacheActivite_1\" value=\"Activit&eacute;\" style=\"font-size:10px;\" size=\"9\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"phase_1\" id=\"phase_1\" style=\"font-size:10px;width:60px;\" disabled>";
+            strRetour += "							<OPTION VALUE=\"0\">Phase</OPTION>";
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 30px;text-align:center;\">";
+            strRetour += "					  <INPUT type=text name=\"tacheDuree_1\" value=\"Dur&eacute;e\" style=\"font-size:10px;width: 30px;\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+            strRetour += "					  <a href=\"javascript:;\" onClick=\"ajoutTache('"+p_tab[1][2]+"','"+p_auth+"',document.forms.formSuivi.tacheType_1.value,document.forms.formSuivi.tacheActivite_1.value,document.forms.formSuivi.tacheDuree_1.value,document.forms.formSuivi.phase_1.value);\"><img border=0 src=\"API_RH/img/mini_plus.png\" /></a>";
+            strRetour += "					</td>";
+            strRetour += "				</tr>";
+            strRetour += "			</table>";
+
+            strRetour += "			<br>";
+
+            i = 5;
+            while(( p_tab[1][i] != "ZZZ" )&(i<100))
+            {
+                    strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+                    strRetour += "				<tr>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"retireTache('"+p_tab[1][2]+"','"+p_auth+"','"+p_tab[1][i]+"');\"><img border=0 src=\"API_RH/img/mini_moins.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypeActi = p_tab[1][i+1];
+                    for (var indiceDomaines in p_tabDomaine) {
+                            if(p_tabDomaine[indiceDomaines][0] == idTypeActi){
+                                    strDescriptionDomaine = p_tabDomaine[indiceDomaines][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionDomaine+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 100px;text-align:center;font-size:10px;\">";
+                    strRetour += "						"+p_tab[1][i+2]+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypePhase = p_tab[1][i+4];
+                    for (var indicePhases in p_tabPhase) {
+                            if(p_tabPhase[indicePhases][0] == idTypePhase){
+                                    strDescriptionPhase = p_tabPhase[indicePhases][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionPhase+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"wwidth: 30px;text-align:center;font-size:10px;\">";
+                    if(p_id_green != parseInt(p_tab[1][i])){
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[1][i]+"\" value=\""+p_tab[1][i+3]+"\" style=\"font-size:10px;width: 30px;\">";
+                    }else{
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[1][i]+"\" value=\""+p_tab[1][i+3]+"\" style=\"font-size:10px;width: 30pxbackground-color:#66CC33;\">";
+                    }
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"editeTache('"+p_tab[1][2]+"','"+p_auth+"','"+p_tab[1][i]+"',document.forms.formSuivi.tacheDuree_"+p_tab[1][i]+".value);\"><img border=0 src=\"API_RH/img/mini_valid.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "				</tr>";
+                    strRetour += "			</table>";
+                    i += 5;
+            }	
+            strRetour += "		</td>";
+
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[2][0],p_tab[2][3],p_tab[2][4])+"\"  style=\"text-align:center;vertical-align:top;\">";
+            strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+            strRetour += "				<tr>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"tacheType_2\" style=\"font-size:10px;width:60px;\" onchange=\"changeListPhase(this.value,'phase_2')\">";
+            strRetour += "							<OPTION VALUE=\"\">Domaine</OPTION>";
+            for (var indiceDomaines in p_tabDomaine) {
+                    strRetour += "							<OPTION VALUE=\""+p_tabDomaine[indiceDomaines][0]+"\">"+p_tabDomaine[indiceDomaines][1]+"</OPTION>";
+            }
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 100px;text-align:center;\">";
+            strRetour += "						<INPUT type=text name=\"tacheActivite_2\" value=\"Activit&eacute;\" style=\"font-size:10px;\" size=\"9\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"phase_2\" id=\"phase_2\" style=\"font-size:10px;width:60px;\" disabled>";
+            strRetour += "							<OPTION VALUE=\"0\">Phase</OPTION>";
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 30px;text-align:center;\">";
+            strRetour += "					  <INPUT type=text name=\"tacheDuree_2\" value=\"Dur&eacute;e\" style=\"font-size:10px;width: 30px;\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+            strRetour += "					  <a href=\"javascript:;\" onClick=\"ajoutTache('"+p_tab[2][2]+"','"+p_auth+"',document.forms.formSuivi.tacheType_2.value,document.forms.formSuivi.tacheActivite_2.value,document.forms.formSuivi.tacheDuree_2.value,document.forms.formSuivi.phase_2.value);\"><img border=0 src=\"API_RH/img/mini_plus.png\" /></a>";
+            strRetour += "					</td>";
+            strRetour += "				</tr>";
+            strRetour += "			</table>";
+
+            strRetour += "			<br>";
+
+            i = 5;
+            while(( p_tab[2][i] != "ZZZ" )&(i<100))
+            {
+                    strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+                    strRetour += "				<tr>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"retireTache('"+p_tab[2][2]+"','"+p_auth+"','"+p_tab[2][i]+"');\"><img border=0 src=\"API_RH/img/mini_moins.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypeActi = p_tab[2][i+1];
+                    for (var indiceDomaines in p_tabDomaine) {
+                            if(p_tabDomaine[indiceDomaines][0] == idTypeActi){
+                                    strDescriptionDomaine = p_tabDomaine[indiceDomaines][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionDomaine+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 100px;text-align:center;font-size:10px;\">";
+                    strRetour += "						"+p_tab[2][i+2]+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypePhase = p_tab[2][i+4];
+                    for (var indicePhases in p_tabPhase) {
+                            if(p_tabPhase[indicePhases][0] == idTypePhase){
+                                    strDescriptionPhase = p_tabPhase[indicePhases][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionPhase+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 30px;text-align:center;font-size:10px;\">";
+                    if(p_id_green != parseInt(p_tab[2][i])){
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[2][i]+"\" value=\""+p_tab[2][i+3]+"\" style=\"font-size:10px;width: 30px;\">";
+                    }else{
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[2][i]+"\" value=\""+p_tab[2][i+3]+"\" style=\"font-size:10px;width: 30pxbackground-color:#66CC33;\">";
+                    }
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"editeTache('"+p_tab[2][2]+"','"+p_auth+"','"+p_tab[2][i]+"',document.forms.formSuivi.tacheDuree_"+p_tab[2][i]+".value);\"><img border=0 src=\"API_RH/img/mini_valid.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "				</tr>";
+                    strRetour += "			</table>";
+                    i += 5;
+            }	
+            strRetour += "		</td>";
+
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[3][0],p_tab[3][3],p_tab[3][4])+"\"  style=\"text-align:center;vertical-align:top;\">";
+            strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+            strRetour += "				<tr>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"tacheType_3\" style=\"font-size:10px;width:60px;\" onchange=\"changeListPhase(this.value,'phase_3')\">";
+            strRetour += "							<OPTION VALUE=\"\">Domaine</OPTION>";
+            for (var indiceDomaines in p_tabDomaine) {
+                    strRetour += "							<OPTION VALUE=\""+p_tabDomaine[indiceDomaines][0]+"\">"+p_tabDomaine[indiceDomaines][1]+"</OPTION>";
+            }
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 100px;text-align:center;\">";
+            strRetour += "						<INPUT type=text name=\"tacheActivite_3\" value=\"Activit&eacute;\" style=\"font-size:10px;\" size=\"9\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"phase_3\" id=\"phase_3\" style=\"font-size:10px;width:60px;\" disabled>";
+            strRetour += "							<OPTION VALUE=\"0\">Phase</OPTION>";
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 30px;text-align:center;\">";
+            strRetour += "					  <INPUT type=text name=\"tacheDuree_3\" value=\"Dur&eacute;e\" style=\"font-size:10px;width: 30px;\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+            strRetour += "					  <a href=\"javascript:;\" onClick=\"ajoutTache('"+p_tab[3][2]+"','"+p_auth+"',document.forms.formSuivi.tacheType_3.value,document.forms.formSuivi.tacheActivite_3.value,document.forms.formSuivi.tacheDuree_3.value,document.forms.formSuivi.phase_3.value);\"><img border=0 src=\"API_RH/img/mini_plus.png\" /></a>";
+            strRetour += "					</td>";
+            strRetour += "				</tr>";
+            strRetour += "			</table>";
+
+            strRetour += "			<br>";
+
+            i = 5;
+            while(( p_tab[3][i] != "ZZZ" )&(i<100))
+            {
+                    strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+                    strRetour += "				<tr>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"retireTache('"+p_tab[3][2]+"','"+p_auth+"','"+p_tab[3][i]+"');\"><img border=0 src=\"API_RH/img/mini_moins.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypeActi = p_tab[3][i+1];
+                    for (var indiceDomaines in p_tabDomaine) {
+                            if(p_tabDomaine[indiceDomaines][0] == idTypeActi){
+                                    strDescriptionDomaine = p_tabDomaine[indiceDomaines][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionDomaine+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 100px;text-align:center;font-size:10px;\">";
+                    strRetour += "						"+p_tab[3][i+2]+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypePhase = p_tab[3][i+4];
+                    for (var indicePhases in p_tabPhase) {
+                            if(p_tabPhase[indicePhases][0] == idTypePhase){
+                                    strDescriptionPhase = p_tabPhase[indicePhases][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionPhase+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 30px;text-align:center;font-size:10px;\">";
+                    if(p_id_green != parseInt(p_tab[3][i])){
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[3][i]+"\" value=\""+p_tab[3][i+3]+"\" style=\"font-size:10px;width: 30px;\">";
+                    }else{
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[3][i]+"\" value=\""+p_tab[3][i+3]+"\" style=\"font-size:10px;width: 30pxbackground-color:#66CC33;\">";
+                    }
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"editeTache('"+p_tab[3][2]+"','"+p_auth+"','"+p_tab[3][i]+"',document.forms.formSuivi.tacheDuree_"+p_tab[3][i]+".value);\"><img border=0 src=\"API_RH/img/mini_valid.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "				</tr>";
+                    strRetour += "			</table>";
+                    i += 5;
+            }	
+            strRetour += "		</td>";
+
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[4][0],p_tab[4][3],p_tab[4][4])+"\" style=\"text-align:center;vertical-align:top;\">";
+            strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+            strRetour += "				<tr>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"tacheType_4\" style=\"font-size:10px;width:60px;\" onchange=\"changeListPhase(this.value,'phase_4')\">";
+            strRetour += "							<OPTION VALUE=\"\">Domaine</OPTION>";
+            for (var indiceDomaines in p_tabDomaine) {
+                    strRetour += "							<OPTION VALUE=\""+p_tabDomaine[indiceDomaines][0]+"\">"+p_tabDomaine[indiceDomaines][1]+"</OPTION>";
+            }
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 100px;text-align:center;\">";
+            strRetour += "						<INPUT type=text name=\"tacheActivite_4\" value=\"Activit&eacute;\" style=\"font-size:10px;\" size=\"9\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"phase_4\" id=\"phase_4\" style=\"font-size:10px;width:60px;\" disabled>";
+            strRetour += "							<OPTION VALUE=\"0\">Phase</OPTION>";
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 30px;text-align:center;\">";
+            strRetour += "					  <INPUT type=text name=\"tacheDuree_4\" value=\"Dur&eacute;e\" style=\"font-size:10px;width: 30px;\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+            strRetour += "					  <a href=\"javascript:;\" onClick=\"ajoutTache('"+p_tab[4][2]+"','"+p_auth+"',document.forms.formSuivi.tacheType_4.value,document.forms.formSuivi.tacheActivite_4.value,document.forms.formSuivi.tacheDuree_4.value,document.forms.formSuivi.phase_4.value);\"><img border=0 src=\"API_RH/img/mini_plus.png\" /></a>";
+            strRetour += "					</td>";
+            strRetour += "				</tr>";
+            strRetour += "			</table>";	
+
+            strRetour += "			<br>";				
+
+            i = 5;
+            while(( p_tab[4][i] != "ZZZ" )&(i<100))
+            {
+                    strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+                    strRetour += "				<tr>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"retireTache('"+p_tab[4][2]+"','"+p_auth+"','"+p_tab[4][i]+"');\"><img border=0 src=\"API_RH/img/mini_moins.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypeActi = p_tab[4][i+1];
+                    for (var indiceDomaines in p_tabDomaine) {
+                            if(p_tabDomaine[indiceDomaines][0] == idTypeActi){
+                                    strDescriptionDomaine = p_tabDomaine[indiceDomaines][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionDomaine+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 100px;text-align:center;font-size:10px;\">";
+                    strRetour += "						"+p_tab[4][i+2]+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypePhase = p_tab[4][i+4];
+                    for (var indicePhases in p_tabPhase) {
+                            if(p_tabPhase[indicePhases][0] == idTypePhase){
+                                    strDescriptionPhase = p_tabPhase[indicePhases][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionPhase+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 30px;text-align:center;font-size:10px;\">";
+                    if(p_id_green != parseInt(p_tab[4][i])){
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[4][i]+"\" value=\""+p_tab[4][i+3]+"\" style=\"font-size:10px;width: 30px;\">";
+                    }else{
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[4][i]+"\" value=\""+p_tab[4][i+3]+"\" style=\"font-size:10px;width: 30px;background-color:#66CC33;\">";
+                    }
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"editeTache('"+p_tab[4][2]+"','"+p_auth+"','"+p_tab[4][i]+"',document.forms.formSuivi.tacheDuree_"+p_tab[4][i]+".value);\"><img border=0 src=\"API_RH/img/mini_valid.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "				</tr>";
+                    strRetour += "			</table>";
+                    i += 5;
+            }	
+            strRetour += "		</td>";
+
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[5][0],p_tab[5][3],p_tab[5][4])+"\"  style=\"text-align:center;vertical-align:top;display:none;\" id=\"sam_bas\">";
+            strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+            strRetour += "				<tr>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"tacheType_5\" style=\"font-size:10px;width:60px;\" onchange=\"changeListPhase(this.value,'phase_5')\">";
+            strRetour += "							<OPTION VALUE=\"\">Domaine</OPTION>";
+            for (var indiceDomaines in p_tabDomaine) {
+                    strRetour += "							<OPTION VALUE=\""+p_tabDomaine[indiceDomaines][0]+"\">"+p_tabDomaine[indiceDomaines][1]+"</OPTION>";
+            }
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 100px;text-align:center;\">";
+            strRetour += "						<INPUT type=text name=\"tacheActivite_5\" value=\"Activit&eacute;\" style=\"font-size:10px;\" size=\"9\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"phase_5\" id=\"phase_5\" style=\"font-size:10px;width:60px;\" disabled>";
+            strRetour += "							<OPTION VALUE=\"0\">Phase</OPTION>";
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 30px;text-align:center;\">";
+            strRetour += "					  <INPUT type=text name=\"tacheDuree_5\" value=\"Dur&eacute;e\" style=\"font-size:10px;width: 30px;\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+            strRetour += "					  <a href=\"javascript:;\" onClick=\"ajoutTache('"+p_tab[5][2]+"','"+p_auth+"',document.forms.formSuivi.tacheType_5.value,document.forms.formSuivi.tacheActivite_5.value,document.forms.formSuivi.tacheDuree_5.value,document.forms.formSuivi.phase_5.value);\"><img border=0 src=\"API_RH/img/mini_plus.png\" /></a>";
+            strRetour += "					</td>";
+            strRetour += "				</tr>";
+            strRetour += "			</table>";
+
+            strRetour += "			<br>";
+
+            i = 5;
+            while(( p_tab[5][i] != "ZZZ" )&(i<100))
+            {
+                    strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+                    strRetour += "				<tr>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"retireTache('"+p_tab[5][2]+"','"+p_auth+"','"+p_tab[5][i]+"');\"><img border=0 src=\"API_RH/img/mini_moins.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypeActi = p_tab[5][i+1];
+                    for (var indiceDomaines in p_tabDomaine) {
+                            if(p_tabDomaine[indiceDomaines][0] == idTypeActi){
+                                    strDescriptionDomaine = p_tabDomaine[indiceDomaines][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionDomaine+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 100px;text-align:center;font-size:10px;\">";
+                    strRetour += "						"+p_tab[5][i+2]+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypePhase = p_tab[5][i+4];
+                    for (var indicePhases in p_tabPhase) {
+                            if(p_tabPhase[indicePhases][0] == idTypePhase){
+                                    strDescriptionPhase = p_tabPhase[indicePhases][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionPhase+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 30px;text-align:center;font-size:10px;\">";
+                    if(p_id_green != parseInt(p_tab[5][i])){
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[5][i]+"\" value=\""+p_tab[5][i+3]+"\" style=\"font-size:10px;width: 30px;\">";
+                    }else{
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[5][i]+"\" value=\""+p_tab[5][i+3]+"\" style=\"font-size:10px;width: 30px;background-color:#66CC33;\">";
+                    }
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"editeTache('"+p_tab[5][2]+"','"+p_auth+"','"+p_tab[5][i]+"',document.forms.formSuivi.tacheDuree_"+p_tab[5][i]+".value);\"><img border=0 src=\"API_RH/img/mini_valid.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "				</tr>";
+                    strRetour += "			</table>";
+                    i += 5;
+            }	
+            strRetour += "		</td>";
+
+            strRetour += "		<td BGCOLOR=\""+getColorOfColonn(p_tab[6][0],p_tab[6][3],p_tab[6][4])+"\"  style=\"text-align:center;vertical-align:top;display:none;\" id=\"dim_bas\">";
+            strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+            strRetour += "				<tr>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"tacheType_6\" style=\"font-size:10px;width:60px;\" onchange=\"changeListPhase(this.value,'phase_6')\">";
+            strRetour += "							<OPTION VALUE=\"\">Domaine</OPTION>";
+            for (var indiceDomaines in p_tabDomaine) {
+                    strRetour += "							<OPTION VALUE=\""+p_tabDomaine[indiceDomaines][0]+"\">"+p_tabDomaine[indiceDomaines][1]+"</OPTION>";
+            }
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 100px;text-align:center;\">";
+            strRetour += "						<INPUT type=text name=\"tacheActivite_6\" value=\"Activit&eacute;\" style=\"font-size:10px;\" size=\"9\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 75px;text-align:center;\">";
+            strRetour += "						<SELECT name=\"phase_6\" id=\"phase_6\" style=\"font-size:10px;width:60px;\" disabled>";
+            strRetour += "							<OPTION VALUE=\"0\">Phase</OPTION>";
+            strRetour += "						</SELECT>";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 30px;text-align:center;\">";
+            strRetour += "					  <INPUT type=text name=\"tacheDuree_6\" value=\"Dur&eacute;e\" style=\"font-size:10px;width: 30px;\">";
+            strRetour += "					</td>";
+            strRetour += "					<td style=\"width: 15px;text-align:center;font-size:10px;\">";
+            strRetour += "					  <a href=\"javascript:;\" onClick=\"ajoutTache('"+p_tab[6][2]+"','"+p_auth+"',document.forms.formSuivi.tacheType_6.value,document.forms.formSuivi.tacheActivite_6.value,document.forms.formSuivi.tacheDuree_6.value,document.forms.formSuivi.phase_6.value);\"><img border=0 src=\"API_RH/img/mini_plus.png\" /></a>";
+            strRetour += "					</td>";
+            strRetour += "				</tr>";
+            strRetour += "			</table>";
+
+            strRetour += "			<br>";
+
+            i = 5;
+            while(( p_tab[6][i] != "ZZZ" )&(i<100))
+            {
+                    strRetour += "			<table cellpadding=\"0\" cellspacing=\"0\" border=1>";
+                    strRetour += "				<tr>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"retireTache('"+p_tab[6][2]+"','"+p_auth+"','"+p_tab[6][i]+"');\"><img border=0 src=\"API_RH/img/mini_moins.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypeActi = p_tab[6][i+1];
+                    for (var indiceDomaines in p_tabDomaine) {
+                            if(p_tabDomaine[indiceDomaines][0] == idTypeActi){
+                                    strDescriptionDomaine = p_tabDomaine[indiceDomaines][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionDomaine+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 100px;text-align:center;font-size:10px;\">";
+                    strRetour += "						"+p_tab[6][i+2]+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 75px;text-align:center;font-size:10px;\">";
+                    idTypePhase = p_tab[6][i+4];
+                    for (var indicePhases in p_tabPhase) {
+                            if(p_tabPhase[indicePhases][0] == idTypePhase){
+                                    strDescriptionPhase = p_tabPhase[indicePhases][1];
+                                    break;
+                            }
+                    }
+                    strRetour += "						"+strDescriptionPhase+"";
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 30px;text-align:center;font-size:10px;\">";
+                    if(p_id_green != parseInt(p_tab[6][i])){
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[6][i]+"\" value=\""+p_tab[6][i+3]+"\" style=\"font-size:10px;width: 30px;\">";
+                    }else{
+                            strRetour += "					  <INPUT type=text name=\"tacheDuree_"+p_tab[6][i]+"\" value=\""+p_tab[6][i+3]+"\" style=\"font-size:10px;width: 30px;background-color:#66CC33;\">";
+                    }
+                    strRetour += "					</td>";
+                    strRetour += "					<td style=\"width: 15px;text-align:center;\">";
+                    strRetour += "					  <a href=\"javascript:;\" onClick=\"editeTache('"+p_tab[6][2]+"','"+p_auth+"','"+p_tab[6][i]+"',document.forms.formSuivi.tacheDuree_"+p_tab[6][i]+".value);\"><img border=0 src=\"API_RH/img/mini_valid.png\" /></a>";
+                    strRetour += "					</td>";
+                    strRetour += "				</tr>";
+                    strRetour += "			</table>";
+                    i += 5;
+            }	
+            strRetour += "		</td>";
+
+            strRetour += "	</tr>";
+            strRetour += "</table>";
+
+            return strRetour;
+        }
+        catch (er) {
+            log(0, "ERROR(getHTML):" + er.message);
+        }
+    }
+		
+    </script>
+
+</head>
+<body onload="OnLoad();">
+    
+    <!-- page -->
+    <div data-role="page" data-title="Titre">
+
+        <!-- /panel -->
+        <div data-role="panel" id="mypanel" data-display="overlay" data-position="left">
+
+        </div>
+        <!-- /panel -->
+
+        <!-- header -->
+        <div data-role="header" data-position="fixed">
+                <a href="#mypanel" data-role="button" data-icon="home" data-iconpos="notext">home</a>
+                <h1 id="id_titre">titre</h1>
+                <a href="javascript:window.location = ('./page_contact.html?mili='+getMilise());" data-role="button" data-icon="info" data-iconpos="notext">Contact</a>
+        </div>
+        <!-- /header -->
+
+        <!-- content -->
+        <div data-role="content" id="main_content">
+
+            <div data-role="collapsible" data-collapsed="false" data-mini="true">
+                    <h3>Supervision</h3>
+
+                    <center>
+
+                    <FORM method="post" id="formFiger" action="#">
+                            <div id="divFormFiger">Pas de r&eacute;sultat.</div>
+                    </form>
+
+                    <FORM method="post" id="formChoix" action="#">
+                            <div id="divChoix">Pas de r&eacute;sultat.</div>
+                    </form>
+
+                    <FORM method="post" id="formSuivi" action="#">
+                            <a href="javascript:semaineEnCours();">Semaine en cours</a>
+                            <div id="divSuivi">Pas de r&eacute;sultat.</div>
+                    </form>
+
+                    </center>
+
+            </div>
+
+            <div data-role="collapsible" data-collapsed="false" data-mini="true">
+                <h3>L&eacute;gende</h3>
+                <center>
+                    <table style="text-align: center;font-size:12px;"  cellpadding="0" cellspacing="0" border="0">
+                      <tbody>
+                            <tr>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;"><a href="#">Semaine en cours</a></td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Lien pour revenir sur la semaine courante</td>
+                              <td style="width: 10px;">&nbsp;</td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Pour les OPS : OPS-YYYY-IT(OPS-2013-01)</td>
+                            </tr>
+                            <tr>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">
+                                    <img border=0 src="API_RH/img/avant.png" />&nbsp;<img border=0 src="API_RH/img/apres.png" />
+                              </td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Changer de semaine Pr&eacute;c&eacute;dente / Suivante</td>
+                              <td>&nbsp;</td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Pour les crises : CRI-YYYY-ITE(CRI-2013-003)</td>
+                            </tr>
+                            <tr>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">
+                              <table border="1" cellpadding="1" cellspacing="1">
+                                    <tbody>
+                                      <tr>
+                                            <td style="text-align: center; width: 65px;">
+                                            <select style="font-size: 10px;width:65px;" name="tacheType_0" data-role="none">
+                                            <option selected="selected" value="">Domaine</option>
+                                            </select>
+                                            </td>
+                                            <td style="text-align: center; width: 100px;"><input style="font-size: 10px;" value="Activit&eacute;" size="11" data-role="none"> </td>
+                                            <td style="text-align: center; width: 50px;"><input style="font-size: 10px;" value="Dur&eacute;e" size="3" data-role="none"> </td>
+                                            <td style="text-align: center; width: 15px; font-size: 10px;"><a href="#"><img src="API_RH/img/mini_plus.png" border="0"></a> </td>
+                                      </tr>
+                                    </tbody>
+                              </table>
+                              </td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">
+                                    Zone de saisie d'une nouvelle activit&eacute;<br>
+                                    - Domaine : La typologie de l'activit&eacute;<br>
+                                    - Activit&eacute; : Description de l'activit&eacute;<br>
+                                    - Dur&eacute;ee : dur&eacute;e, type entier dixi&egrave;me de jour (ex : 2)<br>
+                                    - L'image du plus : pour valider votre saisie
+                              </td>
+                              <td>&nbsp;</td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Pour les HBM : HBM-ITER(HBM-2445)</td>
+                            </tr>
+                            <tr>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">
+                              <table border="1" cellpadding="1" cellspacing="1">
+                                    <tbody>
+                                      <tr>
+                                            <td style="text-align: center; width: 15px; font-size: 10px;">
+                                                    <a href="#"><img src="API_RH/img/mini_moins.png" border="0"></a> </td>
+                                            <td style="text-align: center; width: 100px; font-size: 10px;">
+                                                    Divers
+                                            </td>
+                                            <td style="text-align: center; width: 100px; font-size: 10px;">
+                                                    test1
+                                            </td>
+                                            <td style="text-align: center; width: 50px; font-size: 10px;">
+                                                    1 
+                                            </td>
+                                      </tr>
+                                    </tbody>
+                              </table>
+                              </td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Une saisie d'activit&eacute;<br>
+                            - L'image du mois : pour supprimer l'activit&eacute;</td>
+                              <td>&nbsp;</td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Pour les PMA : PMA_YYYY_ITE(PMA_2012_019)</td>
+                            </tr>
+                            <tr>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;background-color: rgb(229, 222, 82);"></td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Jour courant</td>
+                              <td>&nbsp;</td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Pour les Defect : DITE(D234)</td>
+                            </tr>
+                            <tr>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;background-color: rgb(129, 208, 122);"></td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Jour avec l'activit&eacute; compl&egrave;t&eacute;e</td>
+                              <td>&nbsp;</td>
+                              <td style="width: 275px;">&nbsp;</td>
+                            </tr>
+                            <tr>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;background-color: rgb(218, 218, 218);"></td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Jour non ouvr&eacute;</td>
+                              <td>&nbsp;</td>
+                              <td style="width: 275px;">&nbsp;</td>
+                            </tr>
+                            <tr>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;background-color: rgb(223, 192, 145);"></td>
+                              <td style="background-color:white;width: 275px;border-style: solid solid solid solid; border-color:DarkGray;border-width: 1pt 1pt 1pt 1pt;">Jour avec l'activit&eacute; non compl&egrave;t&eacute;e</td>
+                              <td>&nbsp;</td>
+                              <td style="width: 275px;">&nbsp;</td>
+                            </tr>
+                      </tbody>
+                    </table>
+                </center>
+
+            </div>
+        </div>
+        <!-- /content -->
+
+        <!-- footer -->
+        <div data-role="footer" data-position="fixed">
+                <a data-role="button" data-icon="search" data-iconpos="notext" class="ui-btn-left" href="javascript:window.location = ('./page_faq.html?mili='+getMilise());">FAQ</a>
+                <h1 id="id_affichageUser">User</h1>
+                <a data-role="button" data-icon="delete" data-iconpos="notext" class="ui-btn-right" href="javascript:window.location = ('./page_sortie.html?mili='+getMilise());">Logout</a>
+        </div>
+        <!-- /footer -->
+
+    </div>
+    <!-- /page -->
+</body>
+</html>

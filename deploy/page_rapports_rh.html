@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!--META-->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.75">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+    <!--CSS-->
+    <link rel="stylesheet" href="API/css/themes/default/jquery.mobile.min.css" />
+    <link rel="stylesheet" href="API/css/themes/default/jquery.mobile.structure.min.css" />
+    <!--<link rel="stylesheet" href="API/css/datatables/css/jquery.dataTables.css"/>--> 
+    <link rel="stylesheet" href="API/css/mycss.css" />
+    <link rel="stylesheet" href="API_RH/css/mycss.css" />
+    <link rel="stylesheet" href="css/mycss.css" />
+
+    <!--JS-->
+    <script type="text/javascript" src="API/js/jquery.min.js"></script>
+    <script type="text/javascript" src="API/js/jquery.mobile.min.js"></script>
+    <!--<script type="text/javascript" src="API/js/highcharts.js"></script>-->
+    <!--<script type="text/javascript" src="API/js/modules/exporting.js"></script>-->
+    <!--<script type="text/javascript" src="API/js/jquery.dataTables.min.js"></script>--> 
+    <script type="text/javascript" src="include/config.js"></script>
+    <script type="text/javascript" src="API/js/fonctions.js"></script>
+    <script type="text/javascript" src="API_RH/js/fonctions.js"></script>
+    <script type="text/javascript" src="js/fonctions.js"></script>
+    
+    <script language="javascript" type="text/javascript">
+    checkMaintenance();
+    checkAuthentification();
+	
+    ///////////////////
+    //BLOCK VARIABLE GLOBAL
+    ///////////////////
+    var id_page = 22;
+		 
+    ///////////////////
+    //BLOCK FONCTIONS EVENEMENTS
+    ///////////////////
+    $(document).on('pageinit',function() {
+        try {
+            // Init commmun
+            init_commun();
+        }
+        catch (er) {
+            log(0, "ERROR(init_home):" + er.message);
+        }
+    });
+
+    $(document).on('pageshow',function() {
+        try {
+            // Fin affichage commun
+            show_commun();
+        }
+        catch (er) {
+            log(0, "ERROR(show):" + er.message);
+        }
+    });
+		
+    //Fin chargement page
+    function OnLoad() {
+        try {
+            init_item_listesUsers();
+        }
+        catch (er) {
+            log(0, "ERROR(OnLoad):" + er.message);
+        }
+    }
+		
+    ///////////////////
+    //BLOCK FONCTIONS METIER
+    ///////////////////
+    function init_item_listesUsers() {
+        try {
+            var debray_listes_users = getParameter("debray_listes_users");
+
+            if(debray_listes_users == "1"){
+                charger_listes();
+            }else{
+                $("#selectListe").remove();
+                $('label[for="selectListe"]').remove();
+            }
+        }
+        catch (er) {
+            log(0, "ERROR(init_item_listesUsers):" + er.message);
+        }
+    }
+		
+    function charger_listes() {
+        try {
+            var myObj = document.getElementById("selectListe");
+
+            var tabListes = new Array();
+            tabListes = getListesUsersByPropri(auth);
+
+            for (var indice in tabListes) {
+                myObj.options[myObj.options.length] = new Option(tabListes[indice][1]+"("+tabListes[indice][2]+")",tabListes[indice][0]);
+            }
+
+            $("#selectListe").selectmenu('refresh', true);
+        }
+        catch (er) {
+            log(0, "ERROR(charger_listes):" + er.message);
+        }
+    }
+		
+    function getUrlCsvRepport4(){
+        try {
+            var p_dateBegin = $("#dateDepart").val();
+            var p_dateEnd = $("#dateFin").val();
+
+            if (p_dateBegin == "") {
+                p_dateBegin = "01/01/1970";
+            }
+            if (p_dateEnd == "") {
+                p_dateEnd = "01/01/2070";
+            }
+
+            var reg = new RegExp("[/]", "g");
+            var strDateBegin = p_dateBegin.replace(reg, '');
+            var strDateEnd = p_dateEnd.replace(reg, '');
+
+            var strFiltreUsers = "";
+            var id_liste = $("#selectListe").val();
+            strFiltreUsers = getUsersForListe(id_liste);
+
+            var url = "API_RH/phpsql/mysql_getDataRapportRH4.php?milis="+getMilise()+"&dateBegin=" + strDateBegin+"&dateEnd=" + strDateEnd + "&filtreUsers=" + strFiltreUsers + "&csv=oui&filename=ExportCsvRepport4";
+
+            return url;
+        } catch (er) {
+            log(0, "ERROR(getUrlCsvRepport5):" + er.message);
+            return "";
+        }
+    }
+		
+    function getUrlCsvRepport5(){
+        try {
+            var p_dateBegin = $("#dateDepart").val();
+            var p_dateEnd = $("#dateFin").val();
+
+            if (p_dateBegin == "") {
+                p_dateBegin = "01/01/1970";
+            }
+            if (p_dateEnd == "") {
+                p_dateEnd = "01/01/2070";
+            }
+
+            var reg = new RegExp("[/]", "g");
+            var strDateBegin = p_dateBegin.replace(reg, '');
+            var strDateEnd = p_dateEnd.replace(reg, '');
+
+            var strFiltreUsers = "";
+            var id_liste = $("#selectListe").val();
+            strFiltreUsers = getUsersForListe(id_liste);
+
+            var url = "API_RH/phpsql/mysql_getDataRapportRH5.php?milis="+getMilise()+"&dateBegin=" + strDateBegin+"&dateEnd=" + strDateEnd + "&filtreUsers=" + strFiltreUsers + "&csv=oui&filename=ExportCsvRepport5";
+
+            return url;
+        } catch (er) {
+            log(0, "ERROR(getUrlCsvRepport5):" + er.message);
+            return "";
+        }
+    }
+		
+    function AfficherResultat(p_dateBegin, p_dateEnd){
+        try {
+            $( "#content_tab" ).trigger( "expand" );
+            $( "#content_TabInv" ).trigger( "expand" );
+            $( "#content_TabRepar" ).trigger( "expand" );
+            $( "#content_TabRepport4" ).trigger( "expand" );
+            $( "#content_TabRepport5" ).trigger( "expand" );
+
+            if (p_dateBegin == "") {
+                p_dateBegin = "01/01/1970";
+            }
+            if (p_dateEnd == "") {
+                p_dateEnd = "01/01/2070";
+            }
+
+            var reg = new RegExp("[/]", "g");
+            var strDateBegin = p_dateBegin.replace(reg, '');
+            var strDateEnd = p_dateEnd.replace(reg, '');
+
+            var strFiltreUsers = "";
+            var id_liste = $("#selectListe").val();
+            strFiltreUsers = getUsersForListe(id_liste);
+
+            var tab = new Array();
+            tab = getDataRapportRH1(strDateBegin,strDateEnd,strFiltreUsers);
+            var innerHtml = getHTMLRapportRH1(tab);
+            $('#divTab').html(innerHtml);
+
+            var tab = new Array();
+            tab = getDataRapportRH2(strDateBegin,strDateEnd,strFiltreUsers);
+            var innerHtml = getHTMLRapportRH2(tab);
+            $('#divTabInv').html(innerHtml);
+
+            var tab = new Array();
+            tab = getDataRapportRH3(strDateBegin,strDateEnd,strFiltreUsers);
+            var innerHtml = getHTMLRapportRH3(tab);
+            $('#divTabRepar').html(innerHtml);
+
+            var tab = new Array();
+            tab = getDataRapportRH4(strDateBegin,strDateEnd,strFiltreUsers);
+            var innerHtml = getHTMLRapportRH4(tab);
+            $('#divTabRepport4').html(innerHtml);
+            
+            var tab = new Array();
+            tab = getDataRapportRH5(strDateBegin,strDateEnd,strFiltreUsers);
+            var innerHtml = getHTMLRapportRH5(tab);
+            $('#divTabRepport5').html(innerHtml);
+        } catch (er) {
+            log(0, "ERROR(AfficherResultat):" + er.message);
+        }
+    }
+			
+    ///////////////////
+    //BLOCK FONCTIONS BD
+    ///////////////////
+    function getDataRapportRH1(p_dateBegin,p_dateEnd,p_filtreUsers) {
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getDataRapportRH1.php?milis="+getMilise()+"&dateBegin=" + p_dateBegin+"&dateEnd=" + p_dateEnd + "&filtreUsers=" + p_filtreUsers;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataRapportRH1):" + er.message);
+        }
+    }
+		
+    function getDataRapportRH2(p_dateBegin,p_dateEnd,p_filtreUsers) {
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getDataRapportRH2.php?milis="+getMilise()+"&dateBegin=" + p_dateBegin+"&dateEnd=" + p_dateEnd + "&filtreUsers=" + p_filtreUsers;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataRapportRH2):" + er.message);
+        }
+    }
+		
+    function getDataRapportRH3(p_dateBegin,p_dateEnd,p_filtreUsers) {
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getDataRapportRH3.php?milis="+getMilise()+"&dateBegin=" + p_dateBegin+"&dateEnd=" + p_dateEnd + "&filtreUsers=" + p_filtreUsers;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataRapportRH3):" + er.message);
+        }
+    }
+		
+    function getDataRapportRH4(p_dateBegin,p_dateEnd,p_filtreUsers) {
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getDataRapportRH4.php?milis="+getMilise()+"&dateBegin=" + p_dateBegin+"&dateEnd=" + p_dateEnd + "&filtreUsers=" + p_filtreUsers;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataRapportRH4):" + er.message);
+        }
+    }
+		
+    function getDataRapportRH5(p_dateBegin,p_dateEnd,p_filtreUsers) {
+        try {
+            var strResponse = "";
+            var returns = new Array();
+            var tempTab = new Array();
+            var tempSubTab = new Array();
+
+            xhr_object = new AJ();
+
+            var url = "API_RH/phpsql/mysql_getDataRapportRH5.php?milis="+getMilise()+"&dateBegin=" + p_dateBegin+"&dateEnd=" + p_dateEnd + "&filtreUsers=" + p_filtreUsers;
+
+            xhr_object.open("GET", url, false);
+            xhr_object.send(null);
+            if (xhr_object.readyState == 4) {
+                strResponse = xhr_object.responseText;
+            } else {
+                strResponse = "ERROR";
+            }
+
+            tempTab = strResponse.split("\n");
+
+            for (var indice in tempTab) {
+                tempSubTab = tempTab[indice].split("&");
+                if (tempSubTab.length > 1) {
+                    returns[returns.length] = tempSubTab.slice(0, tempSubTab.length - 1);
+                }
+            }
+
+            delete xhr_object;
+
+            return returns;
+        }
+        catch (er) {
+            log(0, "ERROR(getDataRapportRH5):" + er.message);
+        }
+    }
+		
+		
+    ///////////////////
+    //BLOCK FONCTIONS AFFICHAGE
+    ///////////////////
+    function getHTMLRapportRH1(p_tab) {
+        try {
+            var strRetour = "";
+
+            strRetour += "Compl&eacute;tion : "+p_tab[0][0]+"%.<br>";
+            strRetour += "Nombre de jour ouvr&eacute; : "+p_tab[1][0]+".<br>";
+
+            return strRetour;
+        }
+        catch (er) {
+            log(0, "ERROR(getHTML):" + er.message);
+        }
+    }
+		
+    function getHTMLRapportRH2(p_tab) {
+        try {
+            var strRetour = "";
+
+            strRetour += "<table cellpadding=\"0\" cellspacing=\"0\" border=1 style=\"font-size:14px;background-color:white;text-shadow: none;\">";
+
+            var strRespon = "";
+
+            strRetour += "<tr>";
+            strRetour += "<td style=\"width: 100px;text-align:center;\">";
+            strRetour += "Responsable";
+            strRetour += "</td>";
+            strRetour += "<td style=\"width: 150px;text-align:center;\">";
+            strRetour += "Non compl&eacute;t&eacute;";
+            strRetour += "</td>";
+
+            for (var indice in p_tab) {
+                if(strRespon != p_tab[indice][1]){
+                    strRetour += "</td>";
+                    strRetour += "</tr>";
+                    strRespon = p_tab[indice][1];
+                    strRetour += "<tr>";
+                    strRetour += "<td style=\"width: 100px;text-align:center;\">";
+                    strRetour += ""+p_tab[indice][1]+"";
+                    strRetour += "</td>";
+                    strRetour += "<td style=\"width: 150px;text-align:center;font-size:10px;\">";
+                }
+                strRetour += ""+p_tab[indice][0]+"("+p_tab[indice][2]+")<br>";
+            }
+            strRetour += "</td>";
+            strRetour += "</tr>";
+            strRetour += "</table>";
+
+
+            return strRetour;
+        } catch (er) {
+            log(0, "ERROR(getHTMLRapportRH2):" + er.message);
+        }
+    }
+		
+    function getHTMLRapportRH3(p_tab) {
+        try {
+            var strRetour = "";
+            var grpEncours = "1";
+            var total = 0;
+
+            strRetour += "<table cellpadding=\"0\" cellspacing=\"0\" border=0 style=\"font-size:14px;text-shadow: none;\">";
+
+            strRetour += "<tr>";
+            strRetour += "<td style=\"background-color:white;width: 100px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\">";
+            strRetour += "Description";
+            strRetour += "</td>";
+            strRetour += "<td style=\"background-color:white;width: 150px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\">";
+            strRetour += "Charge";
+            strRetour += "</td>";
+            strRetour += "<td style=\"background-color:white;width: 150px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\">";
+            strRetour += "Perc";
+            strRetour += "</td>";
+            strRetour += "</tr>";
+
+            for (var indice in p_tab) {
+
+                switch (p_tab[indice][4]) 
+                { 
+                    case "1": 
+                            strColor = "#C0C0C0";
+                    break; 
+                    case "2": 
+                            strColor = "#8DB4E3";
+                    break; 
+                    case "3": 
+                            strColor = "#FFC000";
+                    break; 
+                    default: 
+                            strColor = "#C0C0C0";
+                    break; 
+                }
+
+                if(grpEncours != p_tab[indice][4]){
+                    strRetour += "<tr>";
+                    strRetour += "<td style=\"width: 100px;text-align:center;\">";
+                    strRetour += "&nbsp;";
+                    strRetour += "</td>";
+                    strRetour += "<td style=\"width: 150px;text-align:center;\">";
+                    strRetour += "&nbsp;";
+                    strRetour += "</td>";
+                    strRetour += "<td style=\"width: 150px;text-align:center;\">";
+                    strRetour += ""+arrondir(total,2)+"%";
+                    strRetour += "</td>";
+                    strRetour += "</tr>";
+                    strRetour += "<tr>";
+                    strRetour += "<td style=\"width: 100px;text-align:center;\">";
+                    strRetour += "&nbsp;";
+                    strRetour += "</td>";
+                    strRetour += "<td style=\"width: 150px;text-align:center;\">";
+                    strRetour += "&nbsp;";
+                    strRetour += "</td>";
+                    strRetour += "<td style=\"width: 150px;text-align:center;\">";
+                    strRetour += "&nbsp;";
+                    strRetour += "</td>";
+                    strRetour += "</tr>";
+                    total = 0;
+                    grpEncours = p_tab[indice][4];
+                }
+
+                strRetour += "<tr>";
+                strRetour += "<td style=\"width: 100px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+                strRetour += p_tab[indice][0];
+                strRetour += "</td>";
+                strRetour += "<td style=\"width: 150px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+                strRetour += p_tab[indice][1]+"/"+p_tab[indice][2];
+                strRetour += "</td>";
+                strRetour += "<td style=\"width: 150px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+                total += arrondir(parseFloat(p_tab[indice][3]),2);
+                strRetour += arrondir(parseFloat(p_tab[indice][3]),2)+"%";
+                strRetour += "</td>";
+                strRetour += "</tr>";
+            }
+
+            strRetour += "<tr>";
+            strRetour += "<td style=\"width: 100px;text-align:center;\">";
+            strRetour += "&nbsp;";
+            strRetour += "</td>";
+            strRetour += "<td style=\"width: 150px;text-align:center;\">";
+            strRetour += "&nbsp;";
+            strRetour += "</td>";
+            strRetour += "<td style=\"width: 150px;text-align:center;\">";
+            strRetour += arrondir(total,2)+"%";
+            strRetour += "</td>";
+            strRetour += "</tr>";
+
+            strRetour += "</table>";
+
+            return strRetour;
+        }
+        catch (er) {
+            log(0, "ERROR(getHTMLRapportRH3):" + er.message);
+        }
+    }
+		
+    function getHTMLRapportRH4(p_tab) {
+        try {
+            var strRetour = "";
+            var grpEncours = "1";
+            var tempTab = new Array(); 
+            var strColor = "";
+            var strOldColor = "";
+
+            strRetour += "<table cellpadding=\"0\" cellspacing=\"0\" border=0 style=\"font-size:14px;text-shadow: none;\">";
+
+            strRetour += "<tr>";
+            strRetour += "<td style=\"width: 250px;text-align:left;\">";
+            strRetour += "&nbsp;";
+            strRetour += "</td>";
+            strRetour += "<td style=\"width: 50px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\"#CC99FF\">";
+            strRetour += "&nbsp;Total &eacute;quipe";
+            tempTab["TOTAL"] = 0;
+            strRetour += "</td>";
+
+            for (var indice in p_tab[0]) {
+                if((indice > 5)&&((indice % 2) == 0)){
+                    strRetour += "<td style=\"width: 50px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\"#CC99FF\">";
+                    strRetour += p_tab[0][indice];
+                    tempTab[p_tab[0][indice]] = 0;
+                    strRetour += "</td>";
+                }					
+            }
+
+            strRetour += "</tr>";
+
+            for (var indice0 in p_tab) {
+
+                switch (p_tab[indice0][4]) 
+                { 
+                    case "1": 
+                        strColor = "#C0C0C0";
+                    break; 
+                    case "2": 
+                        strColor = "#8DB4E3";
+                    break; 
+                    case "3": 
+                        strColor = "#FFC000";
+                    break; 
+                    default: 
+                        strColor = "#C0C0C0";
+                    break; 
+                }
+
+                if(grpEncours != p_tab[indice0][[4]]){
+                    strRetour += "<tr>";
+                    strRetour += "<td style=\"width: 250px;text-align:right;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strOldColor+"\">";
+                    strRetour += "Total&nbsp;";
+                    strRetour += "</td>";
+                    strRetour += "<td style=\"width: 50px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strOldColor+"\">";
+                    strRetour += ""+arrondir((parseFloat(tempTab["TOTAL"])/10),2)+"";
+                    strRetour += "</td>";
+                    for (var indice1 in p_tab[indice0]) {
+                        if((indice1 > 5)&&((indice1 % 2) == 1))	{
+                            strRetour += "<td style=\"width: 50px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strOldColor+"\">";
+                            strRetour += ""+arrondir((parseFloat(tempTab[p_tab[indice0][parseFloat(indice1)-1]])/10),2)+"";
+                            strRetour += "</td>";
+                        }					
+                    }
+                    strRetour += "</tr>";
+
+                    strRetour += "<tr>";
+                    strRetour += "<td style=\"width: 250px;\">";
+                    strRetour += "&nbsp;";
+                    strRetour += "</td>";
+                    strRetour += "<td style=\"width: 50px;\">";
+                    tempTab["TOTAL"] = 0;
+                    strRetour += "&nbsp;";
+                    strRetour += "</td>";
+                    for (var indice1 in p_tab[indice0]) {
+                        if((indice1 > 5)&&((indice1 % 2) == 1))	{
+                            strRetour += "<td style=\"width: 50px;\">";
+                            strRetour += "&nbsp;";
+                            tempTab[p_tab[indice0][parseFloat(indice1)-1]] = 0;
+                            strRetour += "</td>";
+                        }					
+                    }
+                    strRetour += "</tr>";
+                    grpEncours = p_tab[indice0][4];
+                }
+
+                strRetour += "<tr onMouseOver=\"changeCouleur(this);\" onMouseOut=\"remetCouleur(this);\" >";
+                strRetour += "<td style=\"width: 250px;text-align:left;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+
+                if(p_tab[indice0][3] != "N/A"){
+                    strRetour += "&nbsp;"+p_tab[indice0][1]+" ("+p_tab[indice0][3]+")";
+                }else{
+                    strRetour += "&nbsp;"+p_tab[indice0][1];
+                }
+
+                strRetour += "</td>";
+                strRetour += "<td style=\"width: 50px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+                strRetour += ""+arrondir((parseFloat(p_tab[indice0][5])/10),2)+"";
+                if(p_tab[indice0][3] == "N/A"){
+                    tempTab["TOTAL"] += parseFloat(p_tab[indice0][5]);
+                }
+                strRetour += "</td>";
+                for (var indice1 in p_tab[indice0]) {
+                    if((indice1 > 5)&&((indice1 % 2) == 1))	{
+                        strRetour += "<td style=\"width: 50px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+                        strRetour += ""+arrondir((parseFloat(p_tab[indice0][indice1])/10),2)+"";
+                        if(p_tab[indice0][3] == "N/A"){
+                            tempTab[p_tab[indice0][parseFloat(indice1)-1]] += parseFloat(p_tab[indice0][indice1]);
+                        }
+                        strRetour += "</td>";
+                    }					
+                }
+                strRetour += "</tr>";
+
+                strOldColor = strColor;
+            }
+
+            strRetour += "<tr>";
+            strRetour += "<td style=\"width: 250px;text-align:right;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+            strRetour += "Total&nbsp;";
+            strRetour += "</td>";
+            strRetour += "<td style=\"width: 50px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+            strRetour += ""+arrondir((parseFloat(tempTab["TOTAL"])/10),2)+"";
+            strRetour += "</td>";
+            for (var indice1 in p_tab[indice0]) {
+                if((indice1 > 5)&&((indice1 % 2) == 1))	{
+                    strRetour += "<td style=\"width: 50px;text-align:center;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+                    strRetour += ""+arrondir((parseFloat(tempTab[p_tab[indice0][parseFloat(indice1)-1]])/10),2)+"";
+                    strRetour += "</td>";
+                }					
+            }
+            strRetour += "</tr>";
+
+            strRetour += "</table>";
+
+            return strRetour;
+        }
+        catch (er) {
+            log(0, "ERROR(getHTMLRapportRH4):" + er.message);
+        }
+    }
+		
+    function getHTMLRapportRH5(p_tab) {
+        try {
+            var strRetour = "";
+            var strColor = "#C0C0C0";
+
+            strRetour += "<table cellpadding=\"0\" cellspacing=\"0\" border=0 style=\"font-size:14px;text-shadow: none;\">";
+
+            strRetour += "<tr>";
+            strRetour += "<td style=\"width: 100px;text-align:left;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+            strRetour += "&nbsp;Description";
+            strRetour += "</td>";
+            strRetour += "<td style=\"width: 100px;text-align:left;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+            strRetour += "&nbsp;Utilisateur";
+            strRetour += "</td>";
+            strRetour += "<td style=\"width: 150px;text-align:left;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+            strRetour += "&nbsp;Commentaire";
+            strRetour += "</td>";
+            strRetour += "<td style=\"width: 100px;text-align:left;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+            strRetour += "&nbsp;Charge";
+            strRetour += "</td>";
+            strRetour += "</tr>";
+
+            strColor = "#FFC000";
+
+            for (var indice in p_tab) {
+                strRetour += "<tr>";
+                strRetour += "<td style=\"text-align:left;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+                strRetour += "&nbsp;"+p_tab[indice][1]+"";
+                strRetour += "</td>";
+                strRetour += "<td style=\"text-align:left;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+                strRetour += "&nbsp;"+p_tab[indice][2]+"";
+                strRetour += "</td>";
+                strRetour += "<td style=\"text-align:left;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+                strRetour += "&nbsp;"+p_tab[indice][3]+"";
+                strRetour += "</td>";
+                strRetour += "<td style=\"text-align:left;border-style: solid solid solid solid; border-color:#000000;border-width: 1pt 1pt 1pt 1pt;\" bgcolor=\""+strColor+"\">";
+                strRetour += "&nbsp;"+arrondir((parseFloat(p_tab[indice][4])/10),2);
+                strRetour += "</td>";
+                strRetour += "</tr>";
+            }
+
+            strRetour += "</table>";
+
+            return strRetour;
+        } catch (er) {
+            log(0, "ERROR(getHTMLRapportRH5):" + er.message);
+        }
+    }
+    </script>
+	
+  </head>
+  <body onload="OnLoad();">
+    
+	<!-- page -->
+	<div data-role="page" data-title="Rapport RH - Outil d'audit Automatique">
+	
+		<!-- /panel -->
+		<div data-role="panel" id="mypanel" data-display="overlay" data-position="left">
+
+		</div>
+		<!-- /panel -->
+	
+		<!-- header -->
+		<div data-role="header" data-position="fixed">
+			<a href="#mypanel" data-role="button" data-icon="home" data-iconpos="notext">home</a>
+			<h1 id="id_titre">titre</h1>
+			<a href="javascript:window.location = ('./page_contact.html?mili='+getMilise());" data-role="button" data-icon="info" data-iconpos="notext">Contact</a>
+		</div>
+		<!-- /header -->
+
+		<!-- content -->
+		<div data-role="content" id="main_content">
+			
+			<div data-role="collapsible" data-collapsed="false" data-mini="true">
+				<h3>Votre recherche</h3>
+				<FORM method="post" id="formTab" action="#">
+					Analyse pour la p&eacute;riode de 
+					<a href="javascript:inputMoisEnCoursRH('dateDepart','dateFin');" data-role="button" data-inline="true" data-mini="true" title="Mois en cours">M</a>
+					:
+					<input type="text" name="dateDepart" id="dateDepart" data-mini="true" placeholder="DD/MM/YYYY" />
+					<input type="text" name="dateFin" id="dateFin" data-mini="true" placeholder="DD/MM/YYYY" />
+					<label for="selectListe" class="select">Filtrer sur une liste :</label>
+					<select name="selectListe" id="selectListe" data-native-menu="false">
+						<option value="" data-placeholder="true">Une liste</option>
+					</select>
+					<a href="javascript:AfficherResultat(document.forms.formTab.dateDepart.value, document.forms.formTab.dateFin.value);" data-role="button" data-inline="true" data-icon="arrow-r" data-mini="true">Afficher les resultats</a>
+				</FORM>
+			</div>
+			
+			<div data-role="collapsible" data-collapsed="true" data-mini="true" id="content_tab">
+				<h3>Compl&eacute;tion</h3>
+				<div id="divTab">Pas de r&eacute;sultat.</div>
+			</div>
+			
+			<div data-role="collapsible" data-collapsed="true" data-mini="true" id="content_TabInv">
+				<h3>Carence</h3>
+				<div id="divTabInv">Pas de r&eacute;sultat.</div>
+			</div>
+			
+			<div data-role="collapsible" data-collapsed="true" data-mini="true" id="content_TabRepar">
+				<h3>R&eacute;partition</h3>
+				<div id="divTabRepar">Pas de r&eacute;sultat.</div>
+			</div>
+			
+			<div data-role="collapsible" data-collapsed="true" data-mini="true" id="content_TabRepport4">
+				<h3>R&eacute;partition par "membre"</h3>
+				<div id="divTabRepport4">Pas de r&eacute;sultat.</div>
+				<a href="javascript:window.open(getUrlCsvRepport4());" id="lien_export_Repport5" data-role="button" data-inline="true" data-icon="arrow-r" data-mini="true">Export CSV</a>
+			</div>
+			
+			<div data-role="collapsible" data-collapsed="true" data-mini="true" id="content_TabRepport5">
+				<h3>D&eacute;tail</h3>
+				<div id="divTabRepport5">Pas de r&eacute;sultat.</div>
+				<a href="javascript:window.open(getUrlCsvRepport5());" id="lien_export_Repport5" data-role="button" data-inline="true" data-icon="arrow-r" data-mini="true">Export CSV</a>
+			</div>
+		</div>
+		<!-- /content -->
+		
+		<!-- footer -->
+		<div data-role="footer" data-position="fixed">
+			<a data-role="button" data-icon="search" data-iconpos="notext" class="ui-btn-left" href="javascript:window.location = ('./page_faq.html?mili='+getMilise());">FAQ</a>
+			<h1 id="id_affichageUser">User</h1>
+			<a data-role="button" data-icon="delete" data-iconpos="notext" class="ui-btn-right" href="javascript:window.location = ('./page_sortie.html?mili='+getMilise());">Logout</a>
+		</div>
+		<!-- /footer -->
+		
+	</div>
+	<!-- /page -->
+</body>
+</html>
